@@ -35,10 +35,15 @@ FileReader::FileReader( int fd, unsigned num_buffers ) : fd( fd ), num_buffers( 
     for( unsigned i = 0; i < half_iovec_cnt; i++ ) {
         iovec_half[i].iov_base = buffer_pool->buff_ptrs[i];
     }
-    //TODO: install other iovec half
-    //TODO: free my iovecs 
-    
-    
+
+    struct iovec *iovec_second_half = (struct iovec *) malloc( sizeof(struct iovec) * half_iovec_cnt );
+    for( unsigned i = 0; i < half_iovec_cnt; i++ ) {
+        assert( half_iovec_cnt + i < num_buffers );
+        iovec_second_half[i].iov_base = buffer_pool->buff_ptrs[half_iovec_cnt + i];
+    }
+    preconstructed_iovecs[0] = iovec_half;
+    preconstructed_iovecs[1] = iovec_second_half;
+
 }
 
 void FileReader::loadBuffers( ) {
@@ -46,6 +51,8 @@ void FileReader::loadBuffers( ) {
 }
 
 FileReader::~FileReader() {
+    free( preconstructed_iovecs[0] );
+    free( preconstructed_iovecs[1] );
     delete buffer_pool;
     close( fd );
 }

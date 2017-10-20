@@ -10,7 +10,7 @@ public:
 };
 
 class FileReader {
-    unsigned             num_buffers; //number of buffers
+    unsigned        num_buffers; //number of buffers
     int             fd; //the file
     blksize_t       fs_blksize; //Filesystem block size
     off_t           f_size; //file size
