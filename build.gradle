@@ -1,0 +1,117 @@
+apply plugin: 'cpp'
+
+def setHeaderPathOrAssert( headerName, headers ) {
+    def headerPaths = [ "/usr/local/include", "/usr/include" ]
+    def foundHeaders = false
+    for( fname in headerPaths ) {
+        def locName = fname;
+        if( fname[-1] != "/" ) {
+            locName = fname + "/"
+        }
+        if( file( locName ).exists() &&
+            file( locName + headerName ).exists() ) {
+            headers.srcDir locName + headerName
+            foundHeaders = true
+            break;
+        }
+    }
+    assert( foundHeaders )
+}
+
+def setLinkPathOrAssert( fileName, isStatic, binaries ) {
+    def linkPaths = [ "/usr/local/lib", "/usr/lib", "/usr/lib/x86_64-linux-gnu" ]
+    def foundLink = false
+    for( fname in linkPaths ) {
+        def locName = fname;
+        if( fname[-1] != "/" ) {
+            locName = fname + "/"
+        }
+        if( file( locName ).exists() &&
+            file( locName + fileName ).exists() ) {
+            if( !isStatic ) {
+                binaries.withType(SharedLibraryBinary) {
+                    sharedLibraryFile = file( locName + fileName )
+                }
+            } else {
+                binaries.withType(StaticLibraryBinary) {
+                    staticLibraryFile = file( locName + fileName )
+                }
+            }
+            foundLink = true
+            break;
+        }
+    }
+    assert( foundLink )
+
+}
+
+model {
+    binaries {
+        all {
+            if( toolChain in Gcc ) {
+                cppCompiler.args "-g", "-lpthread", "-march=native", "-Wall", "-Werror", "-std=c++14", "-DDEBUG"
+            }
+        }
+    }
+    repositories {
+        libs(PrebuiltLibraries) {
+            glog {
+                setHeaderPathOrAssert( "glog", headers )
+                setLinkPathOrAssert( "libglog.so", false, binaries )
+            }
+            gmock {
+                setHeaderPathOrAssert( "gmock", headers )
+                setLinkPathOrAssert( "libgmock.so", false, binaries )
+            }
+
+            gtest {
+                setHeaderPathOrAssert( "gtest", headers )
+                setLinkPathOrAssert( "libgtest.so", false, binaries )
+            }
+            pthread {
+                headers.srcDir "/usr/include/"
+                setLinkPathOrAssert( "libpthread.so", false, binaries )
+            }
+            /*
+            folly {
+                setHeaderPathOrAssert( "folly", headers );
+                setLinkPathOrAssert( "libfolly.so", false, binaries )
+            }
+            */
+        }
+    }
+    components {
+        logProcessor(NativeExecutableSpec) {
+            sources {
+                cpp.lib library: 'glog', linkage: 'shared'
+                cpp.lib library: 'pthread', linkage: 'shared'
+                //cpp.lib library: 'folly', linkage: 'shared'
+                cpp {
+                    source {
+                        srcDir "src"
+                        include "**/*.cc"
+                    }
+                }
+            }
+        }
+        unitTest(NativeExecutableSpec) {
+            binaries.all {
+                cppCompiler.define "UNIT_TEST"
+            }
+            sources {
+                cpp.lib library: 'glog', linkage: 'shared'
+                cpp.lib library: 'gmock', linkage: 'shared'
+                cpp.lib library: 'pthread', linkage: 'shared'
+                //cpp.lib library: 'folly', linkage: 'shared'
+                cpp {
+                    source {
+                        srcDir "test"
+                        srcDir "src"
+                        include "**/*.cc"
+                        exclude "**/main.cc"
+                    }
+                }
+            }
+        }
+    }
+}
