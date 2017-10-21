@@ -1,10 +1,11 @@
 #include "file_reader.h"
-#include "assert.h"
+#include <assert.h>
 #include <iostream>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
+#include <vector>
 
 static Token token_transition_map[NUM_WORDS][NUM_WORDS] = {
                  /* START, WORD,  NUMBER,  WHITE_SPACE, PUNCTUATION, NEW_LINE, ERROR, END */  
@@ -232,23 +233,39 @@ void FileReader::processFile( ) {
     int buffer_id_to_process = 0;
     char *buff = buffer_pool->buff_ptrs[buffer_id_to_process];
     int buff_idx = 0;
+    Token cur_state = START;
+    Token last_state = START;
+    std::vector<Token> tokens_in_line;
     for( ;; ) {
-        std::cout << buff[buff_idx++];
-        std::cout << buff[buff_idx++];
-        std::cout << buff[buff_idx++];
-        std::cout << buff[buff_idx++];
-        std::cout << buff[buff_idx++];
-        std::cout << buff[buff_idx++];
-        std::cout << buff[buff_idx++];
-        std::cout << buff[buff_idx++];
-        std::cout << buff[buff_idx++];
-        std::cout << buff[buff_idx++];
-        std::cout << buff[buff_idx++];
-        std::cout << buff[buff_idx++];
-        std::cout << buff[buff_idx++];
-        std::cout << buff[buff_idx++];
-        std::cout << buff[buff_idx++] << std::endl;
-        break;
+        char next_char = buff[buff_idx++];
+        std::cout << "Processing char: " << next_char << std::endl;
+        Token next_token = FileReader::getTokenForChar( next_char );
+        last_state = cur_state;
+        std::cout << "State was: " << cur_state << std::endl;
+        cur_state = token_transition_map[ cur_state ][ next_token ];
+        std::cout << "State is now: " << cur_state << std::endl;
+        assert( cur_state != ERROR );
+        assert( !(cur_state == END && last_state == START) );
+
+        // Finished processing a token
+        if( cur_state == END ) {
+            if( last_state != NEW_LINE ) {
+                //Push back the old token
+                tokens_in_line.push_back( last_state );
+
+                //Get the state after processing THIS token
+                last_state = START;
+                cur_state = token_transition_map[ START ][ next_token ];
+            } else {
+                //TODO: Push back the vector into another, keep going
+                std:: cout << "Got First line of tokens: [ ";
+                for( const auto &t : tokens_in_line ) {
+                    std::cout << t << ", ";
+                }
+                std::cout << " ]" << std::endl;
+                break;
+            }
+        }
     }
 }
 
