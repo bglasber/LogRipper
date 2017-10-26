@@ -1,4 +1,7 @@
 #include <sys/stat.h>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 struct BufferPool {
     unsigned    num_buffs;
     unsigned    buff_sizes;
@@ -23,19 +26,25 @@ enum Token {
 class FileReader {
 
     /* High Level Data --- used to manage reads from disk */
-    int             fd; //the file
-    unsigned        num_buffers; //number of buffers
-    unsigned        half_iovec_cnt; //half the number of buffers
-    blksize_t       fs_blksize; //Filesystem block size
-    off_t           f_size; //file size
-    BufferPool      *buffer_pool; //Pool of buffers to read into;
-    int             load_half; //Which half of the buffers to load
-    struct iovec    *preconstructed_iovecs[2]; //preconstructed iovec halves for loading
+    int                     fd; //the file
+    unsigned                num_buffers; //number of buffers
+    unsigned                half_iovec_cnt; //half the number of buffers
+    blksize_t               fs_blksize; //Filesystem block size
+    off_t                   f_size; //file size
+    BufferPool              *buffer_pool; //Pool of buffers to read into;
+    int                     load_half; //Which half of the buffers to load
+    struct iovec            *preconstructed_iovecs[2]; //preconstructed iovec halves for loading
+
+    bool                    async_reload; //Avoid spurious wakeup
+    bool                    done_file; //mark if we're done
+    std::mutex              mut; //For CV
+    std::condition_variable cv; //Block background reload thread
 
     /* State Data --- used for lexing/parsing the logfile */
 public:
     FileReader( int fd, unsigned num_buffers );
     void loadBuffers();
+    void asyncReloadBuffers();
     void processFile();
     static Token getTokenForChar( char c );
     void processNextToken( char c );

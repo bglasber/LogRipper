@@ -158,7 +158,6 @@ static Token char_to_token_type_map[128] = {
 };
 
 
-
 BufferPool::BufferPool( unsigned num_buffs, unsigned buff_sizes ) : num_buffs( num_buffs ), buff_sizes( buff_sizes ) {
     buff_ptrs = (char **) malloc( sizeof( char * ) * num_buffs );
     for( unsigned i = 0; i < num_buffs; i++ ) {
@@ -204,6 +203,7 @@ FileReader::FileReader( int fd, unsigned num_buffers ) : fd( fd ), num_buffers( 
     preconstructed_iovecs[0] = iovec_half;
     preconstructed_iovecs[1] = iovec_second_half;
 
+
 }
 
 void FileReader::loadBuffers( ) {
@@ -214,6 +214,23 @@ void FileReader::loadBuffers( ) {
     load_half = (load_half + 1) % 2;
     std::cout << "Loaded " << bytes_read << " bytes." << std::endl;
 }
+
+void FileReader::asyncReloadBuffers( ) {
+    for( ;; ) {
+        std::unique_lock<std::mutex> lk( mut );
+        cv.wait( lk, [this]{ return async_reload; } );
+        ssize_t bytes_read = readv( fd, preconstructed_iovecs[load_half], half_iovec_cnt );
+        if( bytes_read == 0 ) {
+            std::cout << "Done file." << std::endl;
+            done_file = true;
+            break;
+        }
+        std::cout << "Async reloaded buffer half: " << load_half << std::endl;
+        load_half = (load_half + 1) % 2;
+        async_reload = false;
+    }
+}
+
 
 Token FileReader::getTokenForChar( char c ) {
     return char_to_token_type_map[ (int) c ];
@@ -231,6 +248,10 @@ void FileReader::processFile( ) {
     loadBuffers();
     loadBuffers();
 
+    //Start async reload thread
+    async_reload = false;
+    std::thread t( &FileReader::asyncReloadBuffers, this );
+
     unsigned buffer_id_to_process = 0;
     char *buff = buffer_pool->buff_ptrs[buffer_id_to_process];
     unsigned buff_idx = 0;
@@ -247,16 +268,23 @@ void FileReader::processFile( ) {
             //If we've crossed into the second half of the buffers, async reload the
             //first half
             if( buffer_id_to_process == half_iovec_cnt ) {
-                std::thread t( &FileReader::loadBuffers, this );
-                t.detach();
+                while( async_reload ) {
+                    std::cout << "Warning... waiting for buffers!" << std::endl;
+                }
+                async_reload = true;
+                cv.notify_one();
             //TODO: we assume that we've finished the reload... 
             //If we're the max buffer, hop back to the first buffer and async reload
             //the second half
             } else if( buffer_id_to_process == num_buffers ) {
-                std::thread t( &FileReader::loadBuffers, this );
-                t.detach();
+                while( async_reload ) {
+                    std::cout << "Warning... waiting for buffers!" << std::endl;
+                }
+                async_reload = true;
+                cv.notify_one();
                 buffer_id_to_process = 0;
-                break;
+                buff = buffer_pool->buff_ptrs[buffer_id_to_process];
+                //break;
             }
         }
         char next_char = buff[buff_idx++];
@@ -279,6 +307,7 @@ void FileReader::processFile( ) {
                 //Push line into buffer
                 tokens_in_line.push_back( NEW_LINE );
                 parsed_lines.push_back( tokens_in_line );
+                tokens_in_line.clear();
 
                 //Reset state
                 cur_state = START;
