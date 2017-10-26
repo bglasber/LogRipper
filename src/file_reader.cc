@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <sys/uio.h>
 #include <vector>
+#include <thread>
 
 static Token token_transition_map[NUM_WORDS][NUM_WORDS] = {
                  /* START, WORD,  NUMBER,  WHITE_SPACE, PUNCTUATION, NEW_LINE, ERROR, END */  
@@ -230,24 +231,42 @@ void FileReader::processFile( ) {
     loadBuffers();
     loadBuffers();
 
-    int buffer_id_to_process = 0;
+    unsigned buffer_id_to_process = 0;
     char *buff = buffer_pool->buff_ptrs[buffer_id_to_process];
-    int buff_idx = 0;
+    unsigned buff_idx = 0;
     Token cur_state = START;
     Token last_state = START;
     std::vector<Token> tokens_in_line;
+    std::vector<std::vector<Token>> parsed_lines;
     for( ;; ) {
+        if( buff_idx >= fs_blksize /* TODO: and consequently, the buffer size */ ) {
+            buff_idx = 0;
+            buff = buffer_pool->buff_ptrs[++buffer_id_to_process];
+
+            //TODO: we assume we've finished the reload...
+            //If we've crossed into the second half of the buffers, async reload the
+            //first half
+            if( buffer_id_to_process == half_iovec_cnt ) {
+                std::thread t( &FileReader::loadBuffers, this );
+                t.detach();
+            //TODO: we assume that we've finished the reload... 
+            //If we're the max buffer, hop back to the first buffer and async reload
+            //the second half
+            } else if( buffer_id_to_process == num_buffers ) {
+                std::thread t( &FileReader::loadBuffers, this );
+                t.detach();
+                buffer_id_to_process = 0;
+                break;
+            }
+        }
         char next_char = buff[buff_idx++];
-        std::cout << "Processing char: " << next_char << std::endl;
         Token next_token = FileReader::getTokenForChar( next_char );
         last_state = cur_state;
-        std::cout << "State was: " << cur_state << std::endl;
         cur_state = token_transition_map[ cur_state ][ next_token ];
-        std::cout << "State is now: " << cur_state << std::endl;
         assert( cur_state != ERROR );
         assert( !(cur_state == END && last_state == START) );
 
-        // Finished processing a token
+        // Finished processing a token ?
         if( cur_state == END ) {
             if( last_state != NEW_LINE ) {
                 //Push back the old token
@@ -257,13 +276,13 @@ void FileReader::processFile( ) {
                 last_state = START;
                 cur_state = token_transition_map[ START ][ next_token ];
             } else {
-                //TODO: Push back the vector into another, keep going
-                std:: cout << "Got First line of tokens: [ ";
-                for( const auto &t : tokens_in_line ) {
-                    std::cout << t << ", ";
-                }
-                std::cout << " ]" << std::endl;
-                break;
+                //Push line into buffer
+                tokens_in_line.push_back( NEW_LINE );
+                parsed_lines.push_back( tokens_in_line );
+
+                //Reset state
+                cur_state = START;
+                last_state = START;
             }
         }
     }
