@@ -37,7 +37,10 @@ class FileReader {
     struct iovec                    *preconstructed_iovecs[2]; //preconstructed iovec halves for loading
 
     bool                            async_reload; //Avoid spurious wakeup
-    bool                            done_file; //mark if we're done
+    //TODO: I'm sure the synchronization on this is broken, but it might not matter
+    volatile bool                   found_last_buff;
+    volatile unsigned               last_buff_id;
+    volatile int                    bytes_in_last_buff;
     std::mutex                      mut; //For CV
     std::condition_variable         cv; //Block background reload thread
     ssize_t                         expected_to_read; //# of bytes we expect to load

@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <sys/uio.h>
 #include <thread>
+#include <cstring>
 
 static Token token_transition_map[NUM_WORDS][NUM_WORDS] = {
                  /* START, WORD,  NUMBER,  WHITE_SPACE, PUNCTUATION, NEW_LINE, ERROR, EOF_TOK, END */
@@ -203,6 +204,7 @@ FileReader::FileReader( int fd, unsigned num_buffers ) : fd( fd ), num_buffers( 
     preconstructed_iovecs[0] = iovec_half;
     preconstructed_iovecs[1] = iovec_second_half;
     expected_to_read = fs_blksize * half_iovec_cnt;
+    found_last_buff = false;
 }
 
 bool FileReader::loadBuffers( ) {
@@ -210,13 +212,15 @@ bool FileReader::loadBuffers( ) {
     std::cout << "fd " << fd << std::endl;;
     std::cout << "half_iovec_cnt: " << half_iovec_cnt << std::endl;
     std::cout << "preconstructed iovecs: " << &(preconstructed_iovecs[load_half][0]) << std::endl;
-    load_half = (load_half + 1) % 2;
     std::cout << "Loaded " << bytes_read << " bytes." << std::endl;
     if( expected_to_read > bytes_read ) {
         std::cout << "SYNC: expected to load " << expected_to_read << " bytes, but only loaded " << bytes_read << "bytes. Likely EOF!" << std::endl;
-        return false;
+        found_last_buff = true;
+        last_buff_id = (bytes_read / fs_blksize) + (load_half * half_iovec_cnt);
+        bytes_in_last_buff = bytes_read % fs_blksize;
     }
-    return true;
+    load_half = (load_half + 1) % 2;
+    return found_last_buff;
 }
 
 void FileReader::asyncReloadBuffers( ) {
@@ -225,9 +229,11 @@ void FileReader::asyncReloadBuffers( ) {
         cv.wait( lk, [this]{ return async_reload; } );
         ssize_t bytes_read = readv( fd, preconstructed_iovecs[load_half], half_iovec_cnt );
         if( expected_to_read > bytes_read ) {
-        std::cout << "ASYNC: expected to load " << expected_to_read << " bytes, but only loaded " << bytes_read << "bytes. Likely EOF!" << std::endl;
-            std::cout << "Done file." << std::endl;
-            done_file = true;
+            std::cout << "ASYNC: expected to load " << expected_to_read << " bytes, but only loaded " << bytes_read << "bytes. Likely EOF!" << std::endl;
+            std::cout << "ASYNC: Done file." << std::endl;
+            found_last_buff = true;
+            last_buff_id = (bytes_read / fs_blksize) + (load_half * half_iovec_cnt);
+            bytes_in_last_buff = bytes_read % fs_blksize;
             break;
         }
         std::cout << "Async reloaded buffer half: " << load_half << std::endl;
@@ -249,21 +255,17 @@ void FileReader::processNextToken( char c ) {
 
 void FileReader::processFile( ) {
     //Load both buffer halves so we have a backup ready while we reload the others
-    bool ok = loadBuffers();
-    if( ok ) {
-        ok = loadBuffers();
-        if( ok ) {
+    bool last_buff = loadBuffers();
+    //Haven't hit EOF yet
+    if( !last_buff ) {
+        last_buff = loadBuffers();
+        if( !last_buff ) {
             //Start async reload thread
             async_reload = false;
             std::thread t( &FileReader::asyncReloadBuffers, this );
             t.detach();
-        } else {
-            done_file = true;
         }
-    } else {
-        done_file = true;
     }
-
     unsigned buffer_id_to_process = 0;
     char *buff = buffer_pool->buff_ptrs[buffer_id_to_process];
     unsigned buff_idx = 0;
@@ -273,6 +275,7 @@ void FileReader::processFile( ) {
     std::vector<Token> tokens_in_line;
     for( ;; ) {
         if( buff_idx >= fs_blksize /* TODO: and consequently, the buffer size */ ) {
+            std::cout << "Wrapping around on buffers..." << std::endl;
             buff_idx = 0;
             buff = buffer_pool->buff_ptrs[++buffer_id_to_process];
 
@@ -280,15 +283,20 @@ void FileReader::processFile( ) {
             //If we've crossed into the second half of the buffers, async reload the
             //first half
             if( buffer_id_to_process == half_iovec_cnt ) {
-                if( done_file ) {
-                    std::cout << "Was going to wait for buffer, but told we are done!" << std::endl;
-                    //We push back here because we might be in intermediate state
+                if( found_last_buff && last_buff_id == buffer_id_to_process &&
+                    bytes_in_last_buff == 0 ) {
+                    //We are out of buffers, push the state and return, we ended on a boundary
                     tokens_in_line.push_back( cur_state );
                     parsed_lines.push_back( tokens_in_line );
                     break;
                 }
+                if( found_last_buff ) {
+                    //No need to block on async reloads, that thread is shut down
+                    goto PARSER_MAIN;
+                }
+                //Wait for async reload
                 while( async_reload ) {
-                    std::cout << "Warning... waiting for buffers!" << std::endl;
+                    //std::cout << "Warning... waiting for buffers!" << std::endl;
                 }
                 async_reload = true;
                 cv.notify_one();
@@ -296,25 +304,41 @@ void FileReader::processFile( ) {
             //If we're the max buffer, hop back to the first buffer and async reload
             //the second half
             } else if( buffer_id_to_process == num_buffers ) {
-                if( done_file ) {
-                    std::cout << "Was going to wait for buffer, but told we are done!" << std::endl;
-                    //We push back here because we might be in intermediate state
+                if( found_last_buff && last_buff_id == buffer_id_to_process &&
+                    bytes_in_last_buff == 0 ) {
+                    //We are out of buffers, push the state and return, we ended on a boundary
                     tokens_in_line.push_back( cur_state );
                     parsed_lines.push_back( tokens_in_line );
                     break;
-                 }
+                }
+                if( found_last_buff ) {
+                    //No need to block on async reloads, that thread is shut down
+                    buffer_id_to_process = 0;
+                    buff = buffer_pool->buff_ptrs[buffer_id_to_process];
+                    goto PARSER_MAIN;
+                }
+                //Not sure how many buffers remain, but we are waiting on them to be reloaded
                 while( async_reload ) {
-                    std::cout << "Warning... waiting for buffers!" << std::endl;
+                    //std::cout << "Warning... waiting for buffers!" << std::endl;
                 }
                 async_reload = true;
                 cv.notify_one();
                 buffer_id_to_process = 0;
                 buff = buffer_pool->buff_ptrs[buffer_id_to_process];
-                //break;
             }
         }
+PARSER_MAIN:
+        bool countdown_bytes = found_last_buff && (last_buff_id == buffer_id_to_process);
+        if( countdown_bytes && bytes_in_last_buff == 0 ) {
+            //Alright, we are out of bytes, push what we have and return
+            tokens_in_line.push_back( cur_state );
+            parsed_lines.push_back( tokens_in_line );
+            break;
+        }
+
         char next_char = buff[buff_idx++];
         next_token = FileReader::getTokenForChar( next_char );
+        //std::cout << "Got next token: " << next_token << std::endl;
         last_state = cur_state;
         cur_state = token_transition_map[ cur_state ][ next_token ];
         assert( cur_state != ERROR );
@@ -349,6 +373,10 @@ void FileReader::processFile( ) {
         } else if( cur_state == EOF_TOK ) {
             std::cout << "Done processing file!" << std::endl;
             break;
+        }
+
+        if( countdown_bytes ) {
+            bytes_in_last_buff--;
         }
     }
 }
