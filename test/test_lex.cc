@@ -390,7 +390,6 @@ TEST( test_lex, cross_buffer_boundary ) {
 
 }
 
-/*
 TEST( test_lex, double_cross_buffer_boundary ) {
     unlink( "test_lex.txt" );
     int fd = open( "test_lex.txt", O_CREAT | O_EXCL | O_WRONLY );
@@ -462,4 +461,4 @@ TEST( test_lex, double_cross_buffer_boundary ) {
 
     close( fd );
 
-} */
+}
