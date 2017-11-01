@@ -24,6 +24,11 @@ enum Token {
     NUM_WORDS
 };
 
+struct TokenWordPair {
+    Token       tok;
+    std::string word;
+};
+
 class FileReader {
 
     /* High Level Data --- used to manage reads from disk */
@@ -44,7 +49,7 @@ class FileReader {
     std::mutex                      mut; //For CV
     std::condition_variable         cv; //Block background reload thread
     ssize_t                         expected_to_read; //# of bytes we expect to load
-    std::vector<std::vector<Token>> parsed_lines; //Track what we've parsed
+    std::vector<std::vector<TokenWordPair>> parsed_lines; //Track what we've parsed
 
     /* State Data --- used for lexing/parsing the logfile */
 public:
@@ -54,6 +59,6 @@ public:
     void processFile();
     static Token getTokenForChar( char c );
     void processNextToken( char c );
-    std::vector<std::vector<Token>> *getParsedData();
+    std::vector<std::vector<TokenWordPair>> *getParsedData();
     ~FileReader();
 };

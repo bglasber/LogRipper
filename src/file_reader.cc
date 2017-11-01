@@ -272,21 +272,26 @@ void FileReader::processFile( ) {
     Token cur_state = START;
     Token last_state = START;
     Token next_token;
-    std::vector<Token> tokens_in_line;
+    std::string token_buff;
+    std::vector<TokenWordPair> tokens_in_line;
     for( ;; ) {
-        if( buff_idx >= fs_blksize /* TODO: and consequently, the buffer size */ ) {
+        if( buff_idx >= fs_blksize ) {
             std::cout << "Wrapping around on buffers..." << std::endl;
             buff_idx = 0;
             buff = buffer_pool->buff_ptrs[++buffer_id_to_process];
 
-            //TODO: we assume we've finished the reload...
             //If we've crossed into the second half of the buffers, async reload the
             //first half
             if( buffer_id_to_process == half_iovec_cnt ) {
                 if( found_last_buff && last_buff_id == buffer_id_to_process &&
                     bytes_in_last_buff == 0 ) {
                     //We are out of buffers, push the state and return, we ended on a boundary
-                    tokens_in_line.push_back( cur_state );
+
+                    //TODO: This is a bunch of copies, need to fix
+                    TokenWordPair twp;
+                    twp.tok = cur_state;
+                    twp.word = token_buff;
+                    tokens_in_line.push_back( twp );
                     parsed_lines.push_back( tokens_in_line );
                     break;
                 }
@@ -295,8 +300,29 @@ void FileReader::processFile( ) {
                     goto PARSER_MAIN;
                 }
                 //Wait for async reload
+                bool done_flag = false;
                 while( async_reload ) {
-                    //std::cout << "Warning... waiting for buffers!" << std::endl;
+                    if( found_last_buff && last_buff_id == buffer_id_to_process &&
+                        bytes_in_last_buff == 0 ) {
+                        //We are out of buffers, push the state and return, we ended on a boundary
+
+                        //TODO: This is a bunch of copies, need to fix
+                        TokenWordPair twp;
+                        twp.tok = cur_state;
+                        twp.word = token_buff;
+                        tokens_in_line.push_back( twp );
+                        parsed_lines.push_back( tokens_in_line );
+                        done_flag = true;
+                        break;
+                    }
+                    if( found_last_buff ) {
+                        //No need to block on async reloads, that thread is shut down
+                        goto PARSER_MAIN;
+                    }
+                        //std::cout << "Warning... waiting for buffers!" << std::endl;
+                }
+                if( done_flag ) { 
+                    break;
                 }
                 async_reload = true;
                 cv.notify_one();
@@ -307,7 +333,11 @@ void FileReader::processFile( ) {
                 if( found_last_buff && last_buff_id == buffer_id_to_process &&
                     bytes_in_last_buff == 0 ) {
                     //We are out of buffers, push the state and return, we ended on a boundary
-                    tokens_in_line.push_back( cur_state );
+                    //TODO: bunch of copies, need to fix
+                    TokenWordPair twp;
+                    twp.tok = cur_state;
+                    twp.word = token_buff;
+                    tokens_in_line.push_back( twp );
                     parsed_lines.push_back( tokens_in_line );
                     break;
                 }
@@ -318,8 +348,30 @@ void FileReader::processFile( ) {
                     goto PARSER_MAIN;
                 }
                 //Not sure how many buffers remain, but we are waiting on them to be reloaded
+                bool done_flag = false;
                 while( async_reload ) {
-                    //std::cout << "Warning... waiting for buffers!" << std::endl;
+                    if( found_last_buff && last_buff_id == buffer_id_to_process &&
+                        bytes_in_last_buff == 0 ) {
+                        //We are out of buffers, push the state and return, we ended on a boundary
+
+                        //TODO: This is a bunch of copies, need to fix
+                        TokenWordPair twp;
+                        twp.tok = cur_state;
+                        twp.word = token_buff;
+                        tokens_in_line.push_back( twp );
+                        parsed_lines.push_back( tokens_in_line );
+                        done_flag = true;
+                        break;
+                    }
+                    if( found_last_buff ) {
+                        //No need to block on async reloads, that thread is shut down
+                        buffer_id_to_process = 0;
+                        buff = buffer_pool->buff_ptrs[buffer_id_to_process];
+                        goto PARSER_MAIN;
+                    }
+                }
+                if( done_flag ) {
+                    break;
                 }
                 async_reload = true;
                 cv.notify_one();
@@ -331,12 +383,17 @@ PARSER_MAIN:
         bool countdown_bytes = found_last_buff && (last_buff_id == buffer_id_to_process);
         if( countdown_bytes && bytes_in_last_buff == 0 ) {
             //Alright, we are out of bytes, push what we have and return
-            tokens_in_line.push_back( cur_state );
+            //TODO: fix copying, reset buff
+            TokenWordPair twp;
+            twp.tok = cur_state;
+            twp.word = token_buff;
+            tokens_in_line.push_back( twp );
             parsed_lines.push_back( tokens_in_line );
             break;
         }
 
         char next_char = buff[buff_idx++];
+        //TODO: token_buff append
         next_token = FileReader::getTokenForChar( next_char );
         //std::cout << "Got next token: " << next_token << std::endl;
         last_state = cur_state;
@@ -349,14 +406,22 @@ PARSER_MAIN:
             if( last_state != NEW_LINE ) {
                 //Push back the old token
                 //std::cout << "Pushing back " << last_state << std::endl;
-                tokens_in_line.push_back( last_state );
+                //TODO: copies, reset buf
+                TokenWordPair twp;
+                twp.tok = last_state;
+                twp.word = token_buff;
+                tokens_in_line.push_back( twp );
 
                 //Get the state after processing THIS token
                 last_state = START;
                 cur_state = token_transition_map[ START ][ next_token ];
             } else {
                 //Push line into buffer
-                tokens_in_line.push_back( NEW_LINE );
+                //TODO: copies, reset buf
+                TokenWordPair twp;
+                twp.tok = NEW_LINE;
+                twp.word = "\n";
+                tokens_in_line.push_back( twp );
                 parsed_lines.push_back( tokens_in_line );
                 tokens_in_line.clear();
 
@@ -381,7 +446,7 @@ PARSER_MAIN:
     }
 }
 
-std::vector<std::vector<Token>> *FileReader::getParsedData() {
+std::vector<std::vector<TokenWordPair>> *FileReader::getParsedData() {
     return &parsed_lines;
 }
 
