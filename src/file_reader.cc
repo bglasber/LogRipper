@@ -336,9 +336,15 @@ void FileReader::processFile( ) {
                 parsed_lines.push_back( tokens_in_line );
                 tokens_in_line.clear();
 
-                //Reset state
-                cur_state = START;
+                //If we hit EOF as the next char, then just finish
+                if( next_token == EOF_TOK ) {
+                    std::cout << "Done processing file!" << std::endl;
+                    break;
+                }
+
+                //Else, figure out what the token should be (bypass peek step) --- Reset state
                 last_state = START;
+                cur_state = token_transition_map[ START ][ next_token ];
             }
         } else if( cur_state == EOF_TOK ) {
             std::cout << "Done processing file!" << std::endl;

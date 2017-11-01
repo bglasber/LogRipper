@@ -317,3 +317,76 @@ TEST( test_lex, async_reload_alternating_buffer ) {
     }
     close( fd );
 }
+
+TEST( test_lex, cross_buffer_boundary ) {
+    unlink( "test_lex.txt" );
+    int fd = open( "test_lex.txt", O_CREAT | O_EXCL | O_WRONLY );
+    ASSERT_GT( fd, 2 );
+
+    struct stat stat_buf;
+    int rc = fstat( fd, &stat_buf );
+    ASSERT_EQ( rc, 0 );
+    size_t fs_blksize = stat_buf.st_blksize;
+
+    std::string msg = "I12:12:12 [file_name.cc] This is a test message\n";
+    size_t times_msg_fits_in_buffer =  fs_blksize / msg.size();
+    for( unsigned i = 0; i < times_msg_fits_in_buffer+1; i++ ) {
+        int rc = write( fd, msg.data(), msg.size() );
+        ASSERT_EQ( rc, msg.size() );
+    }
+
+    rc = fchmod( fd, S_IRWXU );
+    ASSERT_EQ( rc, 0 );
+
+    close( fd );
+    fd = open( "test_lex.txt", O_RDONLY );
+    // Other fds are still in use, since I didn't close them...
+    std::cout << "Got fd: " << fd << ", errno: " << errno;
+    ASSERT_GT( fd, 2 );
+
+
+    //Only need one buffer
+    FileReader reader( fd, 2 );
+    reader.processFile();
+
+    //Check what we read
+    std::vector<std::vector<Token>> *parsed_lines = reader.getParsedData();
+    EXPECT_EQ( parsed_lines->size(), times_msg_fits_in_buffer+1 );
+    for( unsigned i = 0; i < 2; i++ ) {
+        std::vector<Token> &line = parsed_lines->at(i);
+        int line_ind = 0;
+
+        EXPECT_EQ( line[line_ind++], WORD );
+        EXPECT_EQ( line[line_ind++], NUMBER );
+        EXPECT_EQ( line[line_ind++], PUNCTUATION );
+        EXPECT_EQ( line[line_ind++], NUMBER );
+        EXPECT_EQ( line[line_ind++], PUNCTUATION );
+        EXPECT_EQ( line[line_ind++], NUMBER );
+        EXPECT_EQ( line[line_ind++], WHITE_SPACE );
+
+        EXPECT_EQ( line[line_ind++], PUNCTUATION );
+        EXPECT_EQ( line[line_ind++], WORD );
+        EXPECT_EQ( line[line_ind++], PUNCTUATION );
+        EXPECT_EQ( line[line_ind++], WORD );
+        EXPECT_EQ( line[line_ind++], PUNCTUATION );
+        EXPECT_EQ( line[line_ind++], WORD );
+        EXPECT_EQ( line[line_ind++], PUNCTUATION );
+        EXPECT_EQ( line[line_ind++], WHITE_SPACE );
+
+        EXPECT_EQ( line[line_ind++], WORD );
+        EXPECT_EQ( line[line_ind++], WHITE_SPACE );
+        EXPECT_EQ( line[line_ind++], WORD );
+        EXPECT_EQ( line[line_ind++], WHITE_SPACE );
+        EXPECT_EQ( line[line_ind++], WORD );
+        EXPECT_EQ( line[line_ind++], WHITE_SPACE );
+        EXPECT_EQ( line[line_ind++], WORD );
+        EXPECT_EQ( line[line_ind++], WHITE_SPACE );
+        EXPECT_EQ( line[line_ind++], WORD );
+        EXPECT_EQ( line[line_ind++], NEW_LINE );
+
+        EXPECT_EQ( line.size(), line_ind ); //size
+    }
+
+    close( fd );
+
+}
