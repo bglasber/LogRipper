@@ -41,10 +41,16 @@ TEST( test_lex, test_process_line ) {
     std::string msg = "I12:12:12 [file_name.cc] This is a test message\n";
     int rc = write( fd, msg.data(), msg.size() );
     ASSERT_EQ( rc, msg.size());
+
+    rc = fchmod( fd, S_IRWXU );
+    ASSERT_EQ( rc, 0 );
+
     close( fd );
     fd = open( "test_lex.txt", O_RDONLY );
     // Other fds are still in use, since I didn't close them...
+    std::cout << "Got fd: " << fd << ", errno: " << errno;
     ASSERT_GT( fd, 2 );
+
 
     //Only need one buffer
     FileReader reader( fd, 2 );
@@ -85,11 +91,13 @@ TEST( test_lex, test_process_line ) {
     EXPECT_EQ( line[line_ind++], NEW_LINE );
 
     EXPECT_EQ( line.size(), line_ind ); //size
+
+    close( fd );
 }
 
 TEST( test_lex, one_full_buffer ) {
     unlink( "test_lex.txt" );
-    int fd = open( "test_lex.txt", O_CREAT | O_EXCL | O_WRONLY );
+    int fd = open( "test_lex.txt", O_CREAT | O_EXCL | O_RDWR );
     ASSERT_GT( fd, 2 );
     std::string msg = "AAAAAAAAAAAAAAA\n"; //16 bytes so it aligns evenly on buffer boundary
 
@@ -105,6 +113,10 @@ TEST( test_lex, one_full_buffer ) {
         rc = write( fd, msg.data(), msg.size() );
         ASSERT_EQ( rc, msg.size() );
     }
+
+    rc = fchmod( fd, S_IRWXU );
+    ASSERT_EQ( rc, 0 );
+
 
     close( fd );
     fd = open( "test_lex.txt", O_RDONLY );
@@ -126,4 +138,182 @@ TEST( test_lex, one_full_buffer ) {
         EXPECT_EQ( line[line_ind++], NEW_LINE );
         EXPECT_EQ( line.size(), line_ind );
     }
+    close( fd );
+}
+
+
+TEST( test_lex, both_buffers_full ) {
+    unlink( "test_lex.txt" );
+    int fd = open( "test_lex.txt", O_CREAT | O_EXCL | O_RDWR );
+    ASSERT_GT( fd, 2 );
+    std::string msg = "AAAAAAAAAAAAAAA\n"; //16 bytes so it aligns evenly on buffer boundary
+
+    struct stat stat_buf;
+    int rc = fstat( fd, &stat_buf );
+    ASSERT_EQ( rc, 0 );
+    size_t fs_blksize = stat_buf.st_blksize;
+    //Test that messages don't cross buffers
+    EXPECT_EQ( fs_blksize % msg.size(), 0 );
+    //Double up on this write to force 2 full buffers and test the async reload stops
+    size_t num_messages_to_write = (fs_blksize / msg.size()) * 2;
+
+    for( unsigned i = 0; i < num_messages_to_write; i++ ) {
+        rc = write( fd, msg.data(), msg.size() );
+        ASSERT_EQ( rc, msg.size() );
+    }
+
+    rc = fchmod( fd, S_IRWXU );
+    ASSERT_EQ( rc, 0 );
+
+    close( fd );
+    fd = open( "test_lex.txt", O_RDONLY );
+    // Other fds are still in use, since I didn't close them...
+    ASSERT_GT( fd, 2 );
+
+    //Need both buffers this time
+    FileReader reader( fd, 2 );
+    reader.processFile();
+
+    //Check what we read
+    std::vector<std::vector<Token>> *parsed_lines = reader.getParsedData();
+    EXPECT_EQ( parsed_lines->size(), num_messages_to_write );
+    for( unsigned int i = 0; i < num_messages_to_write; i++ ) {
+        std::vector<Token> &line = parsed_lines->at(i);
+        int line_ind = 0;
+
+        EXPECT_EQ( line[line_ind++], WORD );
+        EXPECT_EQ( line[line_ind++], NEW_LINE );
+        EXPECT_EQ( line.size(), line_ind );
+    }
+    close( fd );
+}
+
+TEST( test_lex, async_reload_buffer ) {
+    unlink( "test_lex.txt" );
+    int fd = open( "test_lex.txt", O_CREAT | O_EXCL | O_RDWR );
+    ASSERT_GT( fd, 2 );
+    std::string msg = "AAAAAAAAAAAAAAA\n"; //16 bytes so it aligns evenly on buffer boundary
+
+    struct stat stat_buf;
+    int rc = fstat( fd, &stat_buf );
+    ASSERT_EQ( rc, 0 );
+    size_t fs_blksize = stat_buf.st_blksize;
+    //Test that messages don't cross buffers
+    EXPECT_EQ( fs_blksize % msg.size(), 0 );
+    //Triple on this write to force 3 full buffers and test the async reload
+    size_t num_messages_to_write = (fs_blksize / msg.size()) * 3;
+
+    for( unsigned i = 0; i < num_messages_to_write; i++ ) {
+        rc = write( fd, msg.data(), msg.size() );
+        ASSERT_EQ( rc, msg.size() );
+    }
+
+    rc = fchmod( fd, S_IRWXU );
+    ASSERT_EQ( rc, 0 );
+
+    close( fd );
+    fd = open( "test_lex.txt", O_RDONLY );
+    // Other fds are still in use, since I didn't close them...
+    ASSERT_GT( fd, 2 );
+
+    //Need both buffers this time
+    FileReader reader( fd, 2 );
+    reader.processFile();
+
+    //Check what we read
+    std::vector<std::vector<Token>> *parsed_lines = reader.getParsedData();
+    EXPECT_EQ( parsed_lines->size(), num_messages_to_write );
+    for( unsigned int i = 0; i < num_messages_to_write; i++ ) {
+        std::vector<Token> &line = parsed_lines->at(i);
+        int line_ind = 0;
+
+        EXPECT_EQ( line[line_ind++], WORD );
+        EXPECT_EQ( line[line_ind++], NEW_LINE );
+        EXPECT_EQ( line.size(), line_ind );
+    }
+    close( fd );
+}
+
+TEST( test_lex, async_reload_alternating_buffer ) {
+    unlink( "test_lex.txt" );
+    int fd = open( "test_lex.txt", O_CREAT | O_EXCL | O_RDWR );
+    ASSERT_GT( fd, 2 );
+    std::string msg = "AAAAAAAAAAAAAAA\n"; //16 bytes so it aligns evenly on buffer boundary
+    std::string msg2 = "111111111111111\n"; //16 bytes so it aligns evenly on buffer boundary
+
+    struct stat stat_buf;
+    int rc = fstat( fd, &stat_buf );
+    ASSERT_EQ( rc, 0 );
+    size_t fs_blksize = stat_buf.st_blksize;
+    //Test that messages don't cross buffers
+    EXPECT_EQ( fs_blksize % msg.size(), 0 );
+    EXPECT_EQ( fs_blksize % msg2.size(), 0 );
+
+    //Alternate Pages of A, 1, so we ensure we get messages in order
+    size_t num_messages_to_write = (fs_blksize / msg.size());
+    for( unsigned i = 0; i < num_messages_to_write; i++ ) {
+        rc = write( fd, msg.data(), msg.size() );
+        ASSERT_EQ( rc, msg.size() );
+    }
+    for( unsigned i = 0; i < num_messages_to_write; i++ ) {
+        rc = write( fd, msg2.data(), msg.size() );
+        ASSERT_EQ( rc, msg2.size() );
+    }
+    for( unsigned i = 0; i < num_messages_to_write; i++ ) {
+        rc = write( fd, msg.data(), msg.size() );
+        ASSERT_EQ( rc, msg.size() );
+    }
+    for( unsigned i = 0; i < num_messages_to_write; i++ ) {
+        rc = write( fd, msg2.data(), msg.size() );
+        ASSERT_EQ( rc, msg2.size() );
+    }
+
+    rc = fchmod( fd, S_IRWXU );
+    ASSERT_EQ( rc, 0 );
+
+    close( fd );
+    fd = open( "test_lex.txt", O_RDONLY );
+    // Other fds are still in use, since I didn't close them...
+    ASSERT_GT( fd, 2 );
+
+    //Need both buffers this time
+    FileReader reader( fd, 2 );
+    reader.processFile();
+
+    //Check what we read
+    std::vector<std::vector<Token>> *parsed_lines = reader.getParsedData();
+    EXPECT_EQ( parsed_lines->size(), num_messages_to_write*4 ); //Four times one page of A's
+    for( unsigned int i = 0; i < num_messages_to_write; i++ ) {
+        std::vector<Token> &line = parsed_lines->at(i);
+        int line_ind = 0;
+
+        EXPECT_EQ( line[line_ind++], WORD );
+        EXPECT_EQ( line[line_ind++], NEW_LINE );
+        EXPECT_EQ( line.size(), line_ind );
+    }
+    for( unsigned int i = 256; i < num_messages_to_write*2; i++ ) {
+        std::vector<Token> &line = parsed_lines->at(i);
+        int line_ind = 0;
+
+        EXPECT_EQ( line[line_ind++], NUMBER );
+        EXPECT_EQ( line[line_ind++], NEW_LINE );
+        EXPECT_EQ( line.size(), line_ind );
+    }
+    for( unsigned int i = 256*2; i < num_messages_to_write*3; i++ ) {
+        std::vector<Token> &line = parsed_lines->at(i);
+        int line_ind = 0;
+
+        EXPECT_EQ( line[line_ind++], WORD );
+        EXPECT_EQ( line[line_ind++], NEW_LINE );
+        EXPECT_EQ( line.size(), line_ind );
+    }
+    for( unsigned int i = 256*3; i < num_messages_to_write*4; i++ ) {
+        std::vector<Token> &line = parsed_lines->at(i);
+        int line_ind = 0;
+
+        EXPECT_EQ( line[line_ind++], NUMBER );
+        EXPECT_EQ( line[line_ind++], NEW_LINE );
+        EXPECT_EQ( line.size(), line_ind );
+    }
+    close( fd );
 }
