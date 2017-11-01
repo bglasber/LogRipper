@@ -423,6 +423,7 @@ PARSER_MAIN:
                 //TODO: copies, reset buf
                 TokenWordPair twp;
                 twp.tok = NEW_LINE;
+                twp.word = token_buff;
                 tokens_in_line.push_back( twp );
                 parsed_lines.push_back( tokens_in_line );
                 tokens_in_line.clear();
