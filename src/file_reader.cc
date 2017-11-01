@@ -412,6 +412,9 @@ PARSER_MAIN:
                 twp.word = token_buff;
                 tokens_in_line.push_back( twp );
 
+                //Make a new buffer
+                token_buff.clear();
+
                 //Get the state after processing THIS token
                 last_state = START;
                 cur_state = token_transition_map[ START ][ next_token ];
@@ -420,7 +423,6 @@ PARSER_MAIN:
                 //TODO: copies, reset buf
                 TokenWordPair twp;
                 twp.tok = NEW_LINE;
-                twp.word = "\n";
                 tokens_in_line.push_back( twp );
                 parsed_lines.push_back( tokens_in_line );
                 tokens_in_line.clear();
@@ -431,6 +433,9 @@ PARSER_MAIN:
                     break;
                 }
 
+                //Set the next buff
+                token_buff.clear();
+
                 //Else, figure out what the token should be (bypass peek step) --- Reset state
                 last_state = START;
                 cur_state = token_transition_map[ START ][ next_token ];
@@ -439,6 +444,8 @@ PARSER_MAIN:
             std::cout << "Done processing file!" << std::endl;
             break;
         }
+
+        token_buff.append( 1, next_char );
 
         if( countdown_bytes ) {
             bytes_in_last_buff--;
