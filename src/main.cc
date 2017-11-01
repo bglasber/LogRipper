@@ -10,7 +10,7 @@ int main() {
 
     int fd = open( "ssServer.log", O_RDONLY ); 
     assert( fd > 0 );
-    FileReader reader( fd, 64u );
+    FileReader reader( fd, 128u );
     reader.processFile();
     return 0;
 }

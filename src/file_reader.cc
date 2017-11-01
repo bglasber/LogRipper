@@ -5,19 +5,19 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
-#include <vector>
 #include <thread>
 
 static Token token_transition_map[NUM_WORDS][NUM_WORDS] = {
-                 /* START, WORD,  NUMBER,  WHITE_SPACE, PUNCTUATION, NEW_LINE, ERROR, END */  
-/* START */       { ERROR, WORD,  NUMBER,  WHITE_SPACE, PUNCTUATION, NEW_LINE, ERROR, END },
-/* WORD */        { ERROR, WORD,  END,     END,         END,         END,      ERROR, ERROR},
-/* NUMBER */      { ERROR, END,   NUMBER,  END,         END,         END,      ERROR, ERROR},
-/* WHITE_SPACE */ { ERROR, END,   END,     WHITE_SPACE, END,         END,      ERROR, ERROR},
-/* PUNCTUATION */ { ERROR, END,   END,     END,         END,         END,      ERROR, ERROR},
-/* NEW_LINE */    { ERROR, END,   END,     END,         END,         NEW_LINE, ERROR, ERROR},
-/* ERROR    */    { ERROR, ERROR, ERROR,   ERROR,       ERROR,       ERROR,    ERROR, ERROR},
-/* END      */    { ERROR, ERROR, ERROR,   ERROR,       ERROR,       ERROR,    ERROR, ERROR},
+                 /* START, WORD,  NUMBER,  WHITE_SPACE, PUNCTUATION, NEW_LINE, ERROR, EOF_TOK, END */
+/* START */       { ERROR, WORD,  NUMBER,  WHITE_SPACE, PUNCTUATION, NEW_LINE, ERROR, EOF_TOK, END },
+/* WORD */        { ERROR, WORD,  END,     END,         END,         END,      ERROR, END,     ERROR},
+/* NUMBER */      { ERROR, END,   NUMBER,  END,         END,         END,      ERROR, END,     ERROR},
+/* WHITE_SPACE */ { ERROR, END,   END,     WHITE_SPACE, END,         END,      ERROR, END,     ERROR},
+/* PUNCTUATION */ { ERROR, END,   END,     END,         END,         END,      ERROR, END,     ERROR},
+/* NEW_LINE */    { ERROR, END,   END,     END,         END,         NEW_LINE, ERROR, END,     ERROR},
+/* ERROR    */    { ERROR, ERROR, ERROR,   ERROR,       ERROR,       ERROR,    ERROR, ERROR,   ERROR},
+/* EOF_TOK  */    { ERROR, ERROR, ERROR,   ERROR,       ERROR,       ERROR,    ERROR, ERROR,   ERROR},
+/* END      */    { ERROR, ERROR, ERROR,   ERROR,       ERROR,       ERROR,    ERROR, ERROR,   ERROR},
 };
 
 //We use a lookup table for token types rather than if-blocks
@@ -27,7 +27,7 @@ static Token token_transition_map[NUM_WORDS][NUM_WORDS] = {
 //This map is 128 * 4 bytes -> 512 bytes
 //Therefore, it is better to keep this map in L1 cache and do lookups from it
 static Token char_to_token_type_map[128] = {
-    ERROR, //0
+    EOF_TOK, //\0
     ERROR, //1
     ERROR, //2
     ERROR, //3
@@ -202,17 +202,21 @@ FileReader::FileReader( int fd, unsigned num_buffers ) : fd( fd ), num_buffers( 
     }
     preconstructed_iovecs[0] = iovec_half;
     preconstructed_iovecs[1] = iovec_second_half;
-
-
+    expected_to_read = fs_blksize * half_iovec_cnt;
 }
 
-void FileReader::loadBuffers( ) {
+bool FileReader::loadBuffers( ) {
     ssize_t bytes_read = readv( fd, preconstructed_iovecs[load_half], half_iovec_cnt );
     std::cout << "fd " << fd << std::endl;;
     std::cout << "half_iovec_cnt: " << half_iovec_cnt << std::endl;
     std::cout << "preconstructed iovecs: " << &(preconstructed_iovecs[load_half][0]) << std::endl;
     load_half = (load_half + 1) % 2;
     std::cout << "Loaded " << bytes_read << " bytes." << std::endl;
+    if( expected_to_read > bytes_read ) {
+        std::cout << "SYNC: expected to load " << expected_to_read << " bytes, but only loaded " << bytes_read << "bytes. Likely EOF!" << std::endl;
+        return false;
+    }
+    return true;
 }
 
 void FileReader::asyncReloadBuffers( ) {
@@ -220,7 +224,8 @@ void FileReader::asyncReloadBuffers( ) {
         std::unique_lock<std::mutex> lk( mut );
         cv.wait( lk, [this]{ return async_reload; } );
         ssize_t bytes_read = readv( fd, preconstructed_iovecs[load_half], half_iovec_cnt );
-        if( bytes_read == 0 ) {
+        if( expected_to_read > bytes_read ) {
+        std::cout << "ASYNC: expected to load " << expected_to_read << " bytes, but only loaded " << bytes_read << "bytes. Likely EOF!" << std::endl;
             std::cout << "Done file." << std::endl;
             done_file = true;
             break;
@@ -230,7 +235,6 @@ void FileReader::asyncReloadBuffers( ) {
         async_reload = false;
     }
 }
-
 
 Token FileReader::getTokenForChar( char c ) {
     return char_to_token_type_map[ (int) c ];
@@ -245,20 +249,28 @@ void FileReader::processNextToken( char c ) {
 
 void FileReader::processFile( ) {
     //Load both buffer halves so we have a backup ready while we reload the others
-    loadBuffers();
-    loadBuffers();
-
-    //Start async reload thread
-    async_reload = false;
-    std::thread t( &FileReader::asyncReloadBuffers, this );
+    bool ok = loadBuffers();
+    if( ok ) {
+        ok = loadBuffers();
+        if( ok ) {
+            //Start async reload thread
+            async_reload = false;
+            std::thread t( &FileReader::asyncReloadBuffers, this );
+            t.detach();
+        } else {
+            done_file = true;
+        }
+    } else {
+        done_file = true;
+    }
 
     unsigned buffer_id_to_process = 0;
     char *buff = buffer_pool->buff_ptrs[buffer_id_to_process];
     unsigned buff_idx = 0;
     Token cur_state = START;
     Token last_state = START;
+    Token next_token;
     std::vector<Token> tokens_in_line;
-    std::vector<std::vector<Token>> parsed_lines;
     for( ;; ) {
         if( buff_idx >= fs_blksize /* TODO: and consequently, the buffer size */ ) {
             buff_idx = 0;
@@ -268,6 +280,13 @@ void FileReader::processFile( ) {
             //If we've crossed into the second half of the buffers, async reload the
             //first half
             if( buffer_id_to_process == half_iovec_cnt ) {
+                if( done_file ) {
+                    std::cout << "Was going to wait for buffer, but told we are done!" << std::endl;
+                    //We push back here because we might be in intermediate state
+                    tokens_in_line.push_back( cur_state );
+                    parsed_lines.push_back( tokens_in_line );
+                    break;
+                }
                 while( async_reload ) {
                     std::cout << "Warning... waiting for buffers!" << std::endl;
                 }
@@ -277,6 +296,13 @@ void FileReader::processFile( ) {
             //If we're the max buffer, hop back to the first buffer and async reload
             //the second half
             } else if( buffer_id_to_process == num_buffers ) {
+                if( done_file ) {
+                    std::cout << "Was going to wait for buffer, but told we are done!" << std::endl;
+                    //We push back here because we might be in intermediate state
+                    tokens_in_line.push_back( cur_state );
+                    parsed_lines.push_back( tokens_in_line );
+                    break;
+                 }
                 while( async_reload ) {
                     std::cout << "Warning... waiting for buffers!" << std::endl;
                 }
@@ -288,7 +314,7 @@ void FileReader::processFile( ) {
             }
         }
         char next_char = buff[buff_idx++];
-        Token next_token = FileReader::getTokenForChar( next_char );
+        next_token = FileReader::getTokenForChar( next_char );
         last_state = cur_state;
         cur_state = token_transition_map[ cur_state ][ next_token ];
         assert( cur_state != ERROR );
@@ -298,6 +324,7 @@ void FileReader::processFile( ) {
         if( cur_state == END ) {
             if( last_state != NEW_LINE ) {
                 //Push back the old token
+                //std::cout << "Pushing back " << last_state << std::endl;
                 tokens_in_line.push_back( last_state );
 
                 //Get the state after processing THIS token
@@ -313,8 +340,15 @@ void FileReader::processFile( ) {
                 cur_state = START;
                 last_state = START;
             }
+        } else if( cur_state == EOF_TOK ) {
+            std::cout << "Done processing file!" << std::endl;
+            break;
         }
     }
+}
+
+std::vector<std::vector<Token>> *FileReader::getParsedData() {
+    return &parsed_lines;
 }
 
 
