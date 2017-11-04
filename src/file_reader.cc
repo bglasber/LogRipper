@@ -291,7 +291,6 @@ void FileReader::processFile( ) {
                     bytes_in_last_buff == 0 ) {
                     //We are out of buffers, push the state and return, we ended on a boundary
 
-                    //TODO: This is a bunch of copies, need to fix
                     TokenWordPair twp;
                     twp.tok = cur_state;
                     twp.word = token_buff;
@@ -316,7 +315,6 @@ void FileReader::processFile( ) {
                     if( found_last_buff && last_buff_id == buffer_id_to_process &&
                         bytes_in_last_buff == 0 ) {
                         //We are out of buffers, push the state and return, we ended on a boundary
-                        //TODO: This is a bunch of copies, need to fix
                         TokenWordPair twp;
                         twp.tok = cur_state;
                         twp.word = token_buff;
@@ -343,14 +341,12 @@ void FileReader::processFile( ) {
                 }
                 async_reload = true;
                 cv.notify_one();
-            //TODO: we assume that we've finished the reload... 
             //If we're the max buffer, hop back to the first buffer and async reload
             //the second half
             } else if( buffer_id_to_process == num_buffers ) {
                 if( found_last_buff && last_buff_id == buffer_id_to_process &&
                     bytes_in_last_buff == 0 ) {
                     //We are out of buffers, push the state and return, we ended on a boundary
-                    //TODO: bunch of copies, need to fix
                     TokenWordPair twp;
                     twp.tok = cur_state;
                     twp.word = token_buff;
@@ -411,7 +407,6 @@ PARSER_MAIN:
         bool countdown_bytes = found_last_buff && (last_buff_id == buffer_id_to_process);
         if( countdown_bytes && bytes_in_last_buff == 0 ) {
             //Alright, we are out of bytes, push what we have and return
-            //TODO: fix copying, reset buff
             TokenWordPair twp;
             twp.tok = cur_state;
             twp.word = token_buff;
@@ -428,7 +423,6 @@ PARSER_MAIN:
         }
 
         char next_char = buff[buff_idx++];
-        //TODO: token_buff append
         next_token = FileReader::getTokenForChar( next_char );
         //std::cout << "Got next token: " << next_token << std::endl;
         last_state = cur_state;
@@ -441,7 +435,6 @@ PARSER_MAIN:
             if( last_state != NEW_LINE ) {
                 //Push back the old token
                 //std::cout << "Pushing back " << last_state << std::endl;
-                //TODO: copies, reset buf
                 TokenWordPair twp;
                 twp.tok = last_state;
                 twp.word = token_buff;
@@ -455,7 +448,6 @@ PARSER_MAIN:
                 cur_state = token_transition_map[ START ][ next_token ];
             } else {
                 //Push line into buffer
-                //TODO: copies, reset buf
                 TokenWordPair twp;
                 twp.tok = NEW_LINE;
                 twp.word = token_buff;
