@@ -261,6 +261,7 @@ void FileReader::processFile( ) {
     //Haven't hit EOF yet
     if( !last_buff ) {
         last_buff = loadBuffers();
+
         if( !last_buff ) {
             //Start async reload thread
             async_reload = false;

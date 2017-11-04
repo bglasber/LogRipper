@@ -25,7 +25,7 @@ class FileReader {
     int                             load_half; //Which half of the buffers to load
     struct iovec                    *preconstructed_iovecs[2]; //preconstructed iovec halves for loading
 
-    bool                            async_reload; //Avoid spurious wakeup
+    volatile bool                   async_reload; //Avoid spurious wakeup
     //TODO: I'm sure the synchronization on this is broken, but it might not matter
     volatile bool                   found_last_buff;
     volatile unsigned               last_buff_id;
