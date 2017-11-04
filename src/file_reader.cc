@@ -173,7 +173,7 @@ BufferPool::~BufferPool() {
     free( buff_ptrs );
 }
 
-FileReader::FileReader( int fd, unsigned num_buffers ) : fd( fd ), num_buffers( num_buffers ) {
+FileReader::FileReader( int fd, unsigned num_buffers, ParseBufferEngine *pbe ) : fd( fd ), num_buffers( num_buffers ) {
     struct stat stat_buf;
     int rc = fstat( fd, &stat_buf );
     assert( rc == 0 );
@@ -205,6 +205,8 @@ FileReader::FileReader( int fd, unsigned num_buffers ) : fd( fd ), num_buffers( 
     preconstructed_iovecs[1] = iovec_second_half;
     expected_to_read = fs_blksize * half_iovec_cnt;
     found_last_buff = false;
+
+    parse_buffer_engine = pbe;
 }
 
 bool FileReader::loadBuffers( ) {
@@ -273,12 +275,14 @@ void FileReader::processFile( ) {
     Token last_state = START;
     Token next_token;
     std::string token_buff;
-    std::vector<TokenWordPair> tokens_in_line;
+    ParseBuffer *buffer = new ParseBuffer();
+    std::vector<TokenWordPair> *tokens_in_line = new std::vector<TokenWordPair>();
     for( ;; ) {
         if( buff_idx >= fs_blksize ) {
             std::cout << "Wrapping around on buffers..." << std::endl;
             buff_idx = 0;
-            buff = buffer_pool->buff_ptrs[++buffer_id_to_process];
+            buffer_id_to_process++;
+            buff = buffer_pool->buff_ptrs[buffer_id_to_process == num_buffers ? 0 : buffer_id_to_process ];
 
             //If we've crossed into the second half of the buffers, async reload the
             //first half
@@ -291,8 +295,15 @@ void FileReader::processFile( ) {
                     TokenWordPair twp;
                     twp.tok = cur_state;
                     twp.word = token_buff;
-                    tokens_in_line.push_back( twp );
-                    parsed_lines.push_back( tokens_in_line );
+                    tokens_in_line->push_back( twp );
+                    buffer->addLine( tokens_in_line );
+                    //No need to get a new buff, because we are done parsing
+                    //Just signal this buffer as ready
+                    parse_buffer_engine->putNextBuffer( buffer );
+#if !defined( NDEBUG )
+                    buffer = NULL;
+                    tokens_in_line = NULL;
+#endif
                     break;
                 }
                 if( found_last_buff ) {
@@ -305,13 +316,19 @@ void FileReader::processFile( ) {
                     if( found_last_buff && last_buff_id == buffer_id_to_process &&
                         bytes_in_last_buff == 0 ) {
                         //We are out of buffers, push the state and return, we ended on a boundary
-
                         //TODO: This is a bunch of copies, need to fix
                         TokenWordPair twp;
                         twp.tok = cur_state;
                         twp.word = token_buff;
-                        tokens_in_line.push_back( twp );
-                        parsed_lines.push_back( tokens_in_line );
+                        tokens_in_line->push_back( twp );
+                        buffer->addLine( tokens_in_line );
+                        //No need to get a new buff, because we are done parsing
+                        //Just signal this buffer as ready
+                        parse_buffer_engine->putNextBuffer( buffer );
+#if !defined( NDEBUG )
+                        buffer = NULL;
+                        tokens_in_line = NULL;
+#endif
                         done_flag = true;
                         break;
                     }
@@ -321,7 +338,7 @@ void FileReader::processFile( ) {
                     }
                         //std::cout << "Warning... waiting for buffers!" << std::endl;
                 }
-                if( done_flag ) { 
+                if( done_flag ) {
                     break;
                 }
                 async_reload = true;
@@ -337,14 +354,20 @@ void FileReader::processFile( ) {
                     TokenWordPair twp;
                     twp.tok = cur_state;
                     twp.word = token_buff;
-                    tokens_in_line.push_back( twp );
-                    parsed_lines.push_back( tokens_in_line );
+                    tokens_in_line->push_back( twp );
+                    buffer->addLine( tokens_in_line );
+                    //No need to get a new buff, because we are done parsing
+                    //Just signal this buffer as ready
+                    parse_buffer_engine->putNextBuffer( buffer );
+#if !defined( NDEBUG )
+                    buffer = NULL;
+                    tokens_in_line = NULL;
+#endif
                     break;
                 }
                 if( found_last_buff ) {
                     //No need to block on async reloads, that thread is shut down
                     buffer_id_to_process = 0;
-                    buff = buffer_pool->buff_ptrs[buffer_id_to_process];
                     goto PARSER_MAIN;
                 }
                 //Not sure how many buffers remain, but we are waiting on them to be reloaded
@@ -358,15 +381,21 @@ void FileReader::processFile( ) {
                         TokenWordPair twp;
                         twp.tok = cur_state;
                         twp.word = token_buff;
-                        tokens_in_line.push_back( twp );
-                        parsed_lines.push_back( tokens_in_line );
+                        tokens_in_line->push_back( twp );
+                        buffer->addLine( tokens_in_line );
+                        //No need to get a new buff, because we are done parsing
+                        //Just signal this buffer as ready
+                        parse_buffer_engine->putNextBuffer( buffer );
+#if !defined( NDEBUG )
+                        buffer = NULL;
+                        tokens_in_line = NULL;
+#endif
                         done_flag = true;
                         break;
                     }
                     if( found_last_buff ) {
                         //No need to block on async reloads, that thread is shut down
                         buffer_id_to_process = 0;
-                        buff = buffer_pool->buff_ptrs[buffer_id_to_process];
                         goto PARSER_MAIN;
                     }
                 }
@@ -376,7 +405,6 @@ void FileReader::processFile( ) {
                 async_reload = true;
                 cv.notify_one();
                 buffer_id_to_process = 0;
-                buff = buffer_pool->buff_ptrs[buffer_id_to_process];
             }
         }
 PARSER_MAIN:
@@ -387,8 +415,15 @@ PARSER_MAIN:
             TokenWordPair twp;
             twp.tok = cur_state;
             twp.word = token_buff;
-            tokens_in_line.push_back( twp );
-            parsed_lines.push_back( tokens_in_line );
+            tokens_in_line->push_back( twp );
+            buffer->addLine( tokens_in_line );
+            //No need to get a new buff, because we are done parsing
+            //Just signal this buffer as ready
+            parse_buffer_engine->putNextBuffer( buffer );
+#if !defined( NDEBUG )
+            buffer = NULL;
+            tokens_in_line = NULL;
+#endif
             break;
         }
 
@@ -410,7 +445,7 @@ PARSER_MAIN:
                 TokenWordPair twp;
                 twp.tok = last_state;
                 twp.word = token_buff;
-                tokens_in_line.push_back( twp );
+                tokens_in_line->push_back( twp );
 
                 //Make a new buffer
                 token_buff.clear();
@@ -424,9 +459,15 @@ PARSER_MAIN:
                 TokenWordPair twp;
                 twp.tok = NEW_LINE;
                 twp.word = token_buff;
-                tokens_in_line.push_back( twp );
-                parsed_lines.push_back( tokens_in_line );
-                tokens_in_line.clear();
+                tokens_in_line->push_back( twp );
+
+                bool buff_done = buffer->addLine( tokens_in_line );
+                //Buffer full, make a new one
+                if( buff_done ) {
+                    parse_buffer_engine->putNextBuffer( buffer );
+                    buffer = new ParseBuffer();
+                }
+                tokens_in_line = new std::vector<TokenWordPair>();
 
                 //If we hit EOF as the next char, then just finish
                 if( next_token == EOF_TOK ) {
@@ -453,11 +494,6 @@ PARSER_MAIN:
         }
     }
 }
-
-std::vector<std::vector<TokenWordPair>> *FileReader::getParsedData() {
-    return &parsed_lines;
-}
-
 
 FileReader::~FileReader() {
     free( preconstructed_iovecs[0] );

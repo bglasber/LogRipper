@@ -1,32 +1,16 @@
+#include "token.h"
+#include "parse_buffer.h"
 #include <sys/stat.h>
 #include <thread>
-#include <mutex>
+#include <mutex> 
 #include <condition_variable>
 #include <vector>
 struct BufferPool {
     unsigned    num_buffs;
     unsigned    buff_sizes;
-    char        **buff_ptrs; public:
+    char        **buff_ptrs;
     BufferPool( unsigned num_buffs, unsigned buff_sizes );
     ~BufferPool();
-};
-
-enum Token {
-    START = 0,
-    WORD,
-    NUMBER,
-    WHITE_SPACE,
-    PUNCTUATION,
-    NEW_LINE,
-    ERROR,
-    EOF_TOK,
-    END,
-    NUM_WORDS
-};
-
-struct TokenWordPair {
-    Token       tok;
-    std::string word;
 };
 
 class FileReader {
@@ -49,16 +33,17 @@ class FileReader {
     std::mutex                      mut; //For CV
     std::condition_variable         cv; //Block background reload thread
     ssize_t                         expected_to_read; //# of bytes we expect to load
-    std::vector<std::vector<TokenWordPair>> parsed_lines; //Track what we've parsed
+    //std::vector<std::vector<TokenWordPair>> parsed_lines; //Track what we've parsed
+    ParseBufferEngine               *parse_buffer_engine;
 
     /* State Data --- used for lexing/parsing the logfile */
 public:
-    FileReader( int fd, unsigned num_buffers );
+    FileReader( int fd, unsigned num_buffers, ParseBufferEngine *pbe );
     bool loadBuffers();
     void asyncReloadBuffers();
     void processFile();
+    //So we can test without creating a filereader
     static Token getTokenForChar( char c );
     void processNextToken( char c );
-    std::vector<std::vector<TokenWordPair>> *getParsedData();
     ~FileReader();
 };

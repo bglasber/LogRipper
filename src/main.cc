@@ -10,7 +10,8 @@ int main() {
 
     int fd = open( "ssServer.log", O_RDONLY ); 
     assert( fd > 0 );
-    FileReader reader( fd, 128u );
+    ParseBufferEngine pbe;
+    FileReader reader( fd, 128u, &pbe );
     reader.processFile();
     return 0;
 }

@@ -1,5 +1,6 @@
 #define GTEST_HAS_TR1_TUPLE 0
 #include "../src/file_reader.h"
+#include "../src/parse_buffer.h"
 #include <gmock/gmock.h>
 #include <cerrno>
 #include <ctype.h>
@@ -52,13 +53,17 @@ TEST( test_lex, test_process_line ) {
 
 
     //Only need one buffer
-    FileReader reader( fd, 2 );
+    ParseBufferEngine pbe;
+    FileReader reader( fd, 2, &pbe );
     reader.processFile();
 
     //Check what we read
-    std::vector<std::vector<TokenWordPair>> *parsed_lines = reader.getParsedData();
-    EXPECT_EQ( parsed_lines->size(), 1 );
-    std::vector<TokenWordPair> &line = parsed_lines->at(0);
+    const std::list<ParseBuffer *> &parsed_buffs = pbe.getReadyBuffers();
+    //One unit of work was processed
+    EXPECT_EQ( parsed_buffs.size(), 1 );
+    //First buff, first line
+    ParseBuffer *buff = parsed_buffs.front();
+    std::vector<TokenWordPair> &line = *(buff->parsed_lines[0]);
     int line_ind = 0;
 
     EXPECT_EQ( line[line_ind].tok, WORD );
@@ -174,19 +179,23 @@ TEST( test_lex, one_full_buffer ) {
     ASSERT_GT( fd, 2 );
 
     //Need both buffers this time
-    FileReader reader( fd, 2 );
+    ParseBufferEngine pbe;
+    FileReader reader( fd, 2, &pbe );
     reader.processFile();
 
     //Check what we read
-    std::vector<std::vector<TokenWordPair>> *parsed_lines = reader.getParsedData();
-    EXPECT_EQ( parsed_lines->size(), num_messages_to_write );
-    for( unsigned int i = 0; i < num_messages_to_write; i++ ) {
-        std::vector<TokenWordPair> &line = parsed_lines->at(i);
-        int line_ind = 0;
-
-        EXPECT_EQ( line[line_ind++].tok, WORD );
-        EXPECT_EQ( line[line_ind++].tok, NEW_LINE );
-        EXPECT_EQ( line.size(), line_ind );
+    const std::list<ParseBuffer *> &parsed_buffs = pbe.getReadyBuffers();
+    unsigned tot_lines = 0;
+    for( ParseBuffer *buff : parsed_buffs ) {
+        tot_lines += buff->ind;
+    }
+    EXPECT_EQ( tot_lines, num_messages_to_write );
+    for( ParseBuffer *buff : parsed_buffs ) {
+        for( unsigned i = 0; i < buff->ind; i++ ) {
+            std::vector<TokenWordPair> &line = *(buff->parsed_lines[i]);
+            EXPECT_EQ( line[0].tok, WORD );
+            EXPECT_EQ( line[1].tok, NEW_LINE );
+        }
     }
     close( fd );
 }
@@ -221,19 +230,23 @@ TEST( test_lex, both_buffers_full ) {
     ASSERT_GT( fd, 2 );
 
     //Need both buffers this time
-    FileReader reader( fd, 2 );
+    ParseBufferEngine pbe;
+    FileReader reader( fd, 2, &pbe );
     reader.processFile();
 
     //Check what we read
-    std::vector<std::vector<TokenWordPair>> *parsed_lines = reader.getParsedData();
-    EXPECT_EQ( parsed_lines->size(), num_messages_to_write );
-    for( unsigned int i = 0; i < num_messages_to_write; i++ ) {
-        std::vector<TokenWordPair> &line = parsed_lines->at(i);
-        int line_ind = 0;
-
-        EXPECT_EQ( line[line_ind++].tok, WORD );
-        EXPECT_EQ( line[line_ind++].tok, NEW_LINE );
-        EXPECT_EQ( line.size(), line_ind );
+    const std::list<ParseBuffer *> &parsed_buffs = pbe.getReadyBuffers();
+    unsigned tot_lines = 0;
+    for( ParseBuffer *buff : parsed_buffs ) {
+        tot_lines += buff->ind;
+    }
+    EXPECT_EQ( tot_lines, num_messages_to_write );
+    for( ParseBuffer *buff : parsed_buffs ) {
+        for( unsigned i = 0; i < buff->ind; i++ ) {
+            std::vector<TokenWordPair> &line = *(buff->parsed_lines[i]);
+            EXPECT_EQ( line[0].tok, WORD );
+            EXPECT_EQ( line[1].tok, NEW_LINE );
+        }
     }
     close( fd );
 }
@@ -267,19 +280,23 @@ TEST( test_lex, async_reload_buffer ) {
     ASSERT_GT( fd, 2 );
 
     //Need both buffers this time
-    FileReader reader( fd, 2 );
+    ParseBufferEngine pbe;
+    FileReader reader( fd, 2, &pbe );
     reader.processFile();
 
     //Check what we read
-    std::vector<std::vector<TokenWordPair>> *parsed_lines = reader.getParsedData();
-    EXPECT_EQ( parsed_lines->size(), num_messages_to_write );
-    for( unsigned int i = 0; i < num_messages_to_write; i++ ) {
-        std::vector<TokenWordPair> &line = parsed_lines->at(i);
-        int line_ind = 0;
-
-        EXPECT_EQ( line[line_ind++].tok, WORD );
-        EXPECT_EQ( line[line_ind++].tok, NEW_LINE );
-        EXPECT_EQ( line.size(), line_ind );
+    const std::list<ParseBuffer *> &parsed_buffs = pbe.getReadyBuffers();
+    unsigned tot_lines = 0;
+    for( ParseBuffer *buff : parsed_buffs ) {
+        tot_lines += buff->ind;
+    }
+    EXPECT_EQ( tot_lines, num_messages_to_write );
+    for( ParseBuffer *buff : parsed_buffs ) {
+        for( unsigned i = 0; i < buff->ind; i++ ) {
+            std::vector<TokenWordPair> &line = *(buff->parsed_lines[i]);
+            EXPECT_EQ( line[0].tok, WORD );
+            EXPECT_EQ( line[1].tok, NEW_LINE );
+        }
     }
     close( fd );
 }
@@ -327,43 +344,36 @@ TEST( test_lex, async_reload_alternating_buffer ) {
     ASSERT_GT( fd, 2 );
 
     //Need both buffers this time
-    FileReader reader( fd, 2 );
+    ParseBufferEngine pbe;
+    FileReader reader( fd, 2, &pbe );
     reader.processFile();
 
     //Check what we read
-    std::vector<std::vector<TokenWordPair>> *parsed_lines = reader.getParsedData();
-    EXPECT_EQ( parsed_lines->size(), num_messages_to_write*4 ); //Four times one page of A's
-    for( unsigned int i = 0; i < num_messages_to_write; i++ ) {
-        std::vector<TokenWordPair> &line = parsed_lines->at(i);
-        int line_ind = 0;
-
-        EXPECT_EQ( line[line_ind++].tok, WORD );
-        EXPECT_EQ( line[line_ind++].tok, NEW_LINE );
-        EXPECT_EQ( line.size(), line_ind );
+    const std::list<ParseBuffer *> &parsed_buffs = pbe.getReadyBuffers();
+    unsigned tot_lines = 0;
+    for( ParseBuffer *buff : parsed_buffs ) {
+        tot_lines += buff->ind;
     }
-    for( unsigned int i = 256; i < num_messages_to_write*2; i++ ) {
-        std::vector<TokenWordPair> &line = parsed_lines->at(i);
-        int line_ind = 0;
-
-        EXPECT_EQ( line[line_ind++].tok, NUMBER );
-        EXPECT_EQ( line[line_ind++].tok, NEW_LINE );
-        EXPECT_EQ( line.size(), line_ind );
-    }
-    for( unsigned int i = 256*2; i < num_messages_to_write*3; i++ ) {
-        std::vector<TokenWordPair> &line = parsed_lines->at(i);
-        int line_ind = 0;
-
-        EXPECT_EQ( line[line_ind++].tok, WORD );
-        EXPECT_EQ( line[line_ind++].tok, NEW_LINE );
-        EXPECT_EQ( line.size(), line_ind );
-    }
-    for( unsigned int i = 256*3; i < num_messages_to_write*4; i++ ) {
-        std::vector<TokenWordPair> &line = parsed_lines->at(i);
-        int line_ind = 0;
-
-        EXPECT_EQ( line[line_ind++].tok, NUMBER );
-        EXPECT_EQ( line[line_ind++].tok, NEW_LINE );
-        EXPECT_EQ( line.size(), line_ind );
+    EXPECT_EQ( tot_lines, num_messages_to_write*4 );
+    unsigned cur_ind = 0;
+    for( ParseBuffer *buff : parsed_buffs ) {
+        for( unsigned i = 0; i < buff->ind; i++ ) {
+            std::vector<TokenWordPair> &line = *(buff->parsed_lines[i]);
+            if( cur_ind < num_messages_to_write ) {
+                EXPECT_EQ( line[0].tok, WORD );
+                EXPECT_EQ( line[1].tok, NEW_LINE );
+            } else if( cur_ind < num_messages_to_write * 2 ) {
+                EXPECT_EQ( line[0].tok, NUMBER );
+                EXPECT_EQ( line[1].tok, NEW_LINE );
+            } else if( cur_ind < num_messages_to_write * 3 ) {
+                EXPECT_EQ( line[0].tok, WORD );
+                EXPECT_EQ( line[1].tok, NEW_LINE );
+            } else if( cur_ind < num_messages_to_write * 4 ) {
+                EXPECT_EQ( line[0].tok, NUMBER );
+                EXPECT_EQ( line[1].tok, NEW_LINE );
+            }
+            cur_ind++;
+        }
     }
     close( fd );
 }
@@ -396,100 +406,102 @@ TEST( test_lex, cross_buffer_boundary ) {
 
 
     //Only need one buffer
-    FileReader reader( fd, 2 );
+    ParseBufferEngine pbe;
+    FileReader reader( fd, 2, &pbe );
     reader.processFile();
 
     //Check what we read
-    std::vector<std::vector<TokenWordPair>> *parsed_lines = reader.getParsedData();
-    EXPECT_EQ( parsed_lines->size(), times_msg_fits_in_buffer+1 );
-    for( unsigned i = 0; i < times_msg_fits_in_buffer+1; i++ ) {
-        std::vector<TokenWordPair> &line = parsed_lines->at(i);
-        int line_ind = 0;
-
-        EXPECT_EQ( line[line_ind].tok, WORD );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "I" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, NUMBER );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "12" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
-        EXPECT_STREQ( line[line_ind].word.c_str(), ":" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, NUMBER );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "12" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
-        EXPECT_STREQ( line[line_ind].word.c_str(), ":" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, NUMBER );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "12" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
-        EXPECT_STREQ( line[line_ind].word.c_str(), " " );
-        line_ind++;
-
-        EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "[" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WORD );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "file" );
-        line_ind++;
-
-        EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "_" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WORD );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "name" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "." );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WORD );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "cc" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "]" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
-        EXPECT_STREQ( line[line_ind].word.c_str(), " " );
-        line_ind++;
-
-        EXPECT_EQ( line[line_ind].tok, WORD );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "This" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
-        EXPECT_STREQ( line[line_ind].word.c_str(), " " );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WORD );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "is" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
-        EXPECT_STREQ( line[line_ind].word.c_str(), " " );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WORD );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "a" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
-        EXPECT_STREQ( line[line_ind].word.c_str(), " " );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WORD );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "test" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
-        EXPECT_STREQ( line[line_ind].word.c_str(), " " );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WORD );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "message" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, NEW_LINE );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "\n" );
-        line_ind++;
-
-        EXPECT_EQ( line.size(), line_ind ); //size
+    const std::list<ParseBuffer *> &parsed_buffs = pbe.getReadyBuffers();
+    unsigned tot_lines = 0;
+    for( ParseBuffer *buff : parsed_buffs ) {
+        tot_lines += buff->ind;
     }
+    EXPECT_EQ( tot_lines, times_msg_fits_in_buffer+1 );
+    for( ParseBuffer *buff : parsed_buffs ) {
+        for( unsigned i = 0; i < buff->ind; i++ ) {
+            std::vector<TokenWordPair> &line = *(buff->parsed_lines[i]);
+            int line_ind = 0;
+            EXPECT_EQ( line[line_ind].tok, WORD );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "I" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, NUMBER );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "12" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
+            EXPECT_STREQ( line[line_ind].word.c_str(), ":" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, NUMBER );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "12" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
+            EXPECT_STREQ( line[line_ind].word.c_str(), ":" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, NUMBER );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "12" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
+            EXPECT_STREQ( line[line_ind].word.c_str(), " " );
+            line_ind++;
 
+            EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "[" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WORD );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "file" );
+            line_ind++;
+
+            EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "_" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WORD );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "name" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "." );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WORD );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "cc" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "]" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
+            EXPECT_STREQ( line[line_ind].word.c_str(), " " );
+            line_ind++;
+
+            EXPECT_EQ( line[line_ind].tok, WORD );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "This" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
+            EXPECT_STREQ( line[line_ind].word.c_str(), " " );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WORD );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "is" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
+            EXPECT_STREQ( line[line_ind].word.c_str(), " " );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WORD );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "a" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
+            EXPECT_STREQ( line[line_ind].word.c_str(), " " );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WORD );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "test" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
+            EXPECT_STREQ( line[line_ind].word.c_str(), " " );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WORD );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "message" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, NEW_LINE );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "\n" );
+            line_ind++;
+        }
+    }
     close( fd );
-
 }
 
 TEST( test_lex, double_cross_buffer_boundary ) {
@@ -520,97 +532,103 @@ TEST( test_lex, double_cross_buffer_boundary ) {
 
 
     //Only need one buffer
-    FileReader reader( fd, 2 );
+    ParseBufferEngine pbe;
+    FileReader reader( fd, 2, &pbe );
     reader.processFile();
 
     //Check what we read
-    std::vector<std::vector<TokenWordPair>> *parsed_lines = reader.getParsedData();
-    EXPECT_EQ( parsed_lines->size(), (times_msg_fits_in_buffer+1)*2 );
-    for( unsigned i = 0; i < (times_msg_fits_in_buffer+1)*2; i++ ) {
-        std::vector<TokenWordPair> &line = parsed_lines->at(i);
-        int line_ind = 0;
-
-        EXPECT_EQ( line[line_ind].tok, WORD );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "I" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, NUMBER );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "12" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
-        EXPECT_STREQ( line[line_ind].word.c_str(), ":" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, NUMBER );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "12" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
-        EXPECT_STREQ( line[line_ind].word.c_str(), ":" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, NUMBER );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "12" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
-        EXPECT_STREQ( line[line_ind].word.c_str(), " " );
-        line_ind++;
-
-        EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "[" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WORD );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "file" );
-        line_ind++;
-
-        EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "_" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WORD );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "name" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "." );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WORD );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "cc" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "]" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
-        EXPECT_STREQ( line[line_ind].word.c_str(), " " );
-        line_ind++;
-
-        EXPECT_EQ( line[line_ind].tok, WORD );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "This" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
-        EXPECT_STREQ( line[line_ind].word.c_str(), " " );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WORD );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "is" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
-        EXPECT_STREQ( line[line_ind].word.c_str(), " " );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WORD );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "a" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
-        EXPECT_STREQ( line[line_ind].word.c_str(), " " );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WORD );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "test" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
-        EXPECT_STREQ( line[line_ind].word.c_str(), " " );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, WORD );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "message" );
-        line_ind++;
-        EXPECT_EQ( line[line_ind].tok, NEW_LINE );
-        EXPECT_STREQ( line[line_ind].word.c_str(), "\n" );
-        line_ind++;
-
-        EXPECT_EQ( line.size(), line_ind ); //size
+    const std::list<ParseBuffer *> &parsed_buffs = pbe.getReadyBuffers();
+    unsigned tot_lines = 0;
+    for( ParseBuffer *buff : parsed_buffs ) {
+        tot_lines += buff->ind;
     }
+    EXPECT_EQ( tot_lines, (times_msg_fits_in_buffer+1)*2 );
+
+    for( ParseBuffer *buff : parsed_buffs ) {
+        for( unsigned i = 0; i < buff->ind; i++ ) {
+            std::vector<TokenWordPair> &line = *(buff->parsed_lines[i]);
+            int line_ind = 0;
+            EXPECT_EQ( line[line_ind].tok, WORD );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "I" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, NUMBER );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "12" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
+            EXPECT_STREQ( line[line_ind].word.c_str(), ":" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, NUMBER );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "12" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
+            EXPECT_STREQ( line[line_ind].word.c_str(), ":" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, NUMBER );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "12" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
+            EXPECT_STREQ( line[line_ind].word.c_str(), " " );
+            line_ind++;
+
+            EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "[" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WORD );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "file" );
+            line_ind++;
+
+            EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "_" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WORD );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "name" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "." );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WORD );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "cc" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, PUNCTUATION );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "]" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
+            EXPECT_STREQ( line[line_ind].word.c_str(), " " );
+            line_ind++;
+
+            EXPECT_EQ( line[line_ind].tok, WORD );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "This" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
+            EXPECT_STREQ( line[line_ind].word.c_str(), " " );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WORD );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "is" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
+            EXPECT_STREQ( line[line_ind].word.c_str(), " " );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WORD );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "a" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
+            EXPECT_STREQ( line[line_ind].word.c_str(), " " );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WORD );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "test" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WHITE_SPACE );
+            EXPECT_STREQ( line[line_ind].word.c_str(), " " );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, WORD );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "message" );
+            line_ind++;
+            EXPECT_EQ( line[line_ind].tok, NEW_LINE );
+            EXPECT_STREQ( line[line_ind].word.c_str(), "\n" );
+            line_ind++;
+        }
+    }
+
 
     close( fd );
 
