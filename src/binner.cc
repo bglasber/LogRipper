@@ -10,9 +10,10 @@ void Bin::insertIntoBin( std::vector<TokenWordPair> *line ) {
     }
     if( !found_match ) {
         unique_entries_in_bin.push_back( line );
+    } else {
+        //There's already one of these, destroy the string
+        delete line;
     }
-    //There's already one of these, destroy the string
-    delete line;
 }
 
 bool Bin::vectorMatch( std::vector<TokenWordPair> *line1, std::vector<TokenWordPair> *line2 ) {
