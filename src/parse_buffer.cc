@@ -5,7 +5,9 @@ ParseBuffer::ParseBuffer() {
     ind = 0;
 }
 
-ParseBuffer::destroyBufferLines() {
+//You don't necessarily want to destroy all the lines in the buffer, since we may have
+//put the line in the bin
+void ParseBuffer::destroyBufferLines() {
     for( unsigned i = 0; i < ind; i++ ) {
         delete( parsed_lines[i] );
     }
@@ -24,6 +26,8 @@ ParseBufferEngine::ParseBufferEngine() {
 ParseBufferEngine::~ParseBufferEngine() {
     std::unique_lock<std::mutex> lk( mut );
     for( ParseBuffer *buff : ready_buffers ) {
+        //Since these haven't been processed yet, we'll clean up the lines
+        buff->destroyBufferLines();
         delete buff;
     }
     ready_buffers.clear();
