@@ -23,8 +23,12 @@ struct BinKeyHasher {
 class Bin {
     std::vector<std::vector<TokenWordPair> *> unique_entries_in_bin;
 public:
+    ~Bin();
     void insertIntoBin( std::vector<TokenWordPair> *line );
     bool vectorMatch( std::vector<TokenWordPair> *line1, std::vector<TokenWordPair> *line2 );
+    std::vector<std::vector<TokenWordPair> *> &getBinVector() {
+        return unique_entries_in_bin;
+    }
 };
 
 class Binner {
@@ -34,4 +38,8 @@ class Binner {
 public:
     Binner( ParseBufferEngine *pbe_in ) : pbe_in( pbe_in ) {}
     void binEntriesInBuffer( ParseBuffer *buffer );
+
+    std::unordered_map<BinKey, Bin, BinKeyHasher> &getUnderlyingMap() {
+        return bin_map;
+    }
 };
