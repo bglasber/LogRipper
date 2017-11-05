@@ -13,7 +13,7 @@ struct ParseBuffer {
     unsigned ind;
     std::vector<TokenWordPair> *parsed_lines[ LINES_IN_BUFFER ];
     ParseBuffer();
-    ~ParseBuffer();
+    void destroyBufferLines();
     bool addLine( std::vector<TokenWordPair> *line );
 };
 

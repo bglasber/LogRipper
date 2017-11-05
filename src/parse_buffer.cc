@@ -5,7 +5,7 @@ ParseBuffer::ParseBuffer() {
     ind = 0;
 }
 
-ParseBuffer::~ParseBuffer() {
+ParseBuffer::destroyBufferLines() {
     for( unsigned i = 0; i < ind; i++ ) {
         delete( parsed_lines[i] );
     }
