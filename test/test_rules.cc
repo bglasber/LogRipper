@@ -68,6 +68,7 @@ TEST( test_rules, single_entry_pass_through ) {
     EXPECT_EQ( tokens_in_line->at(0).tok, WORD );
     EXPECT_EQ( tokens_in_line->at(1).tok, NEW_LINE );
 
+    buffer->destroyBufferLines();
     delete buffer;
 }
 
@@ -107,6 +108,7 @@ TEST( test_rules, single_entry_abstract_all ) {
     EXPECT_EQ( tokens_in_line->at(1).tok, ABSTRACTED_VALUE );
     EXPECT_STREQ( tokens_in_line->at(1).word.c_str(), "\n" );
 
+    buffer->destroyBufferLines();
     delete buffer;
 }
 
@@ -146,6 +148,8 @@ TEST( test_rules, apply_rule_across_whole_buffer ) {
         EXPECT_STREQ( tokens_in_line->at(1).word.c_str(), "\n" );
     }
 
+
+    buffer->destroyBufferLines();
     delete buffer;
 }
 
@@ -206,6 +210,6 @@ TEST( test_rules, apply_multiple_rules_across_whole_buffer ) {
         EXPECT_STREQ( tokens_in_line->at(6).word.c_str(), "\n" );
     }
 
+    buffer->destroyBufferLines();
     delete buffer;
-
 }
