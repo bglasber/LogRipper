@@ -56,14 +56,19 @@ public:
 class Binner {
     std::unordered_map<BinKey, Bin, BinKeyHasher> bin_map;
     ParseBufferEngine *pbe_in;
+    volatile bool done;
+
+    void processLoop();
 
 public:
-    Binner( ParseBufferEngine *pbe_in ) : pbe_in( pbe_in ) {}
+    Binner( ParseBufferEngine *pbe_in ) : pbe_in( pbe_in ), done( false ) {}
     ~Binner();
     void binEntriesInBuffer( ParseBuffer *buffer );
 
     void serialize( std::ofstream &os );
     void deserialize( std::ifstream &is );
+    void startProcessingBuffers();
+    void terminateWhenDoneProcessing();
 
     std::unordered_map<BinKey, Bin, BinKeyHasher> &getUnderlyingMap() {
         return bin_map;

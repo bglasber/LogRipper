@@ -21,6 +21,7 @@ bool ParseBuffer::addLine( std::vector<TokenWordPair> *line ) {
 }
 
 ParseBufferEngine::ParseBufferEngine() {
+    term_when_out_of_buffers = false;
 }
 
 ParseBufferEngine::~ParseBufferEngine() {
@@ -33,10 +34,23 @@ ParseBufferEngine::~ParseBufferEngine() {
     ready_buffers.clear();
 }
 
+void ParseBufferEngine::termWhenOutOfBuffers() {
+    term_when_out_of_buffers = true;
+    cv.notify_one();
+}
+
 ParseBuffer *ParseBufferEngine::getNextBuffer() {
     std::unique_lock<std::mutex> lk( mut );
     //Sleep until there are some ready buffers
-    cv.wait( lk, [ this ] { return !ready_buffers.empty(); } );
+    if( ready_buffers.empty() ) {
+        if( term_when_out_of_buffers ) {
+            return NULL;
+        }
+        cv.wait( lk, [ this ] { return !ready_buffers.empty() || term_when_out_of_buffers; } );
+    }
+    if( ready_buffers.empty() && term_when_out_of_buffers ) {
+        return NULL;
+    }
     ParseBuffer *buff = ready_buffers.front();
     ready_buffers.pop_front();
     return buff;

@@ -1,5 +1,7 @@
 #include "binner.h"
 #include <cassert>
+#include <thread>
+#include <iostream>
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/unordered_map.hpp>
 #include <boost/archive/text_oarchive.hpp>
@@ -30,15 +32,17 @@ void Bin::insertIntoBin( std::vector<TokenWordPair> *line ) {
 }
 
 bool Bin::vectorMatch( std::vector<TokenWordPair> *line1, std::vector<TokenWordPair> *line2 ) {
-    assert( line1->size() == line2->size() );
+    if( line1->size() != line2->size() ) {
+        //Hash collision?
+        return false;
+    }
     for( unsigned int i = 0; i < line1->size(); i++ ) {
         //Mismatch tokens, or mismatch a word entry
         if( line1->at(i).tok != line2->at(i).tok ||
-            ( line1->at(i).tok == WORD && (line1->at(i).word != line2->at(i).word) ) ) {
+            ( (line1->at(i).tok == WORD || line1->at(i).tok == NUMBER) && (line1->at(i).word != line2->at(i).word) ) ) {
             return false;
         }
-    }
-    return true;
+    } return true;
 }
 
 void Binner::binEntriesInBuffer( ParseBuffer *buffer ) {
@@ -86,5 +90,29 @@ void Binner::deserialize( std::ifstream &is ) {
 Binner::~Binner() {
     for( auto it = bin_map.begin(); it != bin_map.end(); it++ ) {
         it->second.destroyBinEntries();
+    }
+}
+
+void Binner::processLoop() {
+    for( ;; ) {
+        ParseBuffer *buffer = pbe_in->getNextBuffer();
+        if( !buffer ) {
+            done = true;
+            std::cout << "Binner got null buffer, terminating..." << std::endl;
+            return;
+        }
+        binEntriesInBuffer( buffer );
+    }
+}
+
+void Binner::startProcessingBuffers() {
+    std::thread t( &Binner::processLoop, this );
+    t.detach();
+}
+
+void Binner::terminateWhenDoneProcessing() {
+    pbe_in->termWhenOutOfBuffers();
+    while( !done ) {
+        std::this_thread::sleep_for( std::chrono::milliseconds(300) );
     }
 }

@@ -24,10 +24,12 @@ class ParseBufferEngine {
     std::mutex mut;
     std::condition_variable cv;
     std::list<ParseBuffer *> ready_buffers;
+    bool term_when_out_of_buffers;
 public:
     ParseBufferEngine();
     ~ParseBufferEngine();
     ParseBuffer *getNextBuffer();
+    void termWhenOutOfBuffers();
     void putNextBuffer( ParseBuffer *buff );
 
     //For unit tests
