@@ -1,6 +1,9 @@
 #ifndef __TOKEN_H__
 #define __TOKEN_H__
 #include <string>
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/string.hpp>
+
 enum Token {
     START = 0,
     WORD,
@@ -16,6 +19,8 @@ enum Token {
 };
 
 struct TokenWordPair {
+    friend class boost::serialization::access;
+
     Token       tok;
     std::string word;
     TokenWordPair() { }
@@ -23,5 +28,12 @@ struct TokenWordPair {
         tok = other.tok;
         word = other.word;
     }
+    TokenWordPair( Token &tok, std::string &word ) : tok( tok ), word( word ) { }
+
+    template<class Archive>
+        void serialize( Archive &ar, const unsigned int version ) {
+            ar & tok;
+            ar & word;
+        }
 };
 #endif

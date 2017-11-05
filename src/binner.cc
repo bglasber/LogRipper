@@ -1,7 +1,13 @@
 #include "binner.h"
 #include <cassert>
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/unordered_map.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
 
-Bin::~Bin() {
+//Destroying bins like this breaks deserialization if you put it in the default destructor
+//Bypass it by making a separate function
+void Bin::destroyBinEntries( ) {
     for( unsigned int i = 0; i < unique_entries_in_bin.size(); i++ ) {
         delete unique_entries_in_bin.at(i);
     }
@@ -26,8 +32,9 @@ void Bin::insertIntoBin( std::vector<TokenWordPair> *line ) {
 bool Bin::vectorMatch( std::vector<TokenWordPair> *line1, std::vector<TokenWordPair> *line2 ) {
     assert( line1->size() == line2->size() );
     for( unsigned int i = 0; i < line1->size(); i++ ) {
+        //Mismatch tokens, or mismatch a word entry
         if( line1->at(i).tok != line2->at(i).tok ||
-            line1->at(i).word != line2->at(i).word ) {
+            ( line1->at(i).tok == WORD && (line1->at(i).word != line2->at(i).word) ) ) {
             return false;
         }
     }
@@ -63,5 +70,21 @@ void Binner::binEntriesInBuffer( ParseBuffer *buffer ) {
             assert( search != bin_map.end() );
             search->second.insertIntoBin( line );
         }
+    }
+}
+
+void Binner::serialize( std::ofstream &os ) {
+    boost::archive::text_oarchive oarch( os );
+    oarch << bin_map;
+}
+
+void Binner::deserialize( std::ifstream &is ) {
+    boost::archive::text_iarchive iarch( is );
+    iarch >> bin_map;
+}
+
+Binner::~Binner() {
+    for( auto it = bin_map.begin(); it != bin_map.end(); it++ ) {
+        it->second.destroyBinEntries();
     }
 }

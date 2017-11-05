@@ -4,6 +4,9 @@
 #include "../src/token.h"
 #include <gmock/gmock.h>
 #include <vector>
+#include <fstream>
+#include <unistd.h>
+#include <iostream>
 
 using namespace ::testing;
 
@@ -284,9 +287,88 @@ TEST( test_binner, no_match_abstracted_vals ) {
 
     EXPECT_NE( search, map.end() );
     std::vector<std::vector<TokenWordPair> *> &vec = search->second.getBinVector();
-    EXPECT_EQ( vec.size(), 2 );
+    EXPECT_EQ( vec.size(), 1 );
     EXPECT_EQ( vec.at(0), line );
-    EXPECT_EQ( vec.at(1), line2 );
 
     delete buffer;
+}
+
+TEST( test_binner, test_serialize ) {
+    std::ofstream os;
+    unlink( "test_serialize.txt" );
+    os.open( "test_serialize.txt", std::ofstream::out );
+
+    ParseBufferEngine pbe_in;
+    Binner binner( &pbe_in );
+
+    ParseBuffer *buffer = new ParseBuffer();
+
+    //One word
+    std::vector<TokenWordPair> *line = new std::vector<TokenWordPair>();
+    TokenWordPair twp;
+    twp.tok = WORD;
+    twp.word = "TEST";
+    line->push_back( twp );
+    twp.tok = ABSTRACTED_VALUE;
+    twp.word = "BLAH"; //doesn't match
+    line->push_back( twp );
+    twp.tok = NEW_LINE;
+    twp.word = "\n";
+    line->push_back( twp );
+    buffer->addLine( line );
+
+    //Different line, but same content
+    std::vector<TokenWordPair> *line2 = new std::vector<TokenWordPair>();
+    twp.tok = WORD;
+    twp.word = "TEST";
+    line2->push_back( twp );
+    twp.tok = ABSTRACTED_VALUE;
+    line2->push_back( twp );
+    twp.tok = NEW_LINE;
+    twp.word = "\n";
+    line2->push_back( twp );
+    buffer->addLine( line2 );
+
+    binner.binEntriesInBuffer( buffer );
+    binner.serialize( os );
+    os.close();
+
+    std::ifstream is;
+    is.open( "test_serialize.txt", std::ifstream::in );
+
+    Binner binner2( &pbe_in );
+    std::cout << "Going to deserialize" << std::endl;
+    binner2.deserialize( is );
+    std::cout << "Done deserializing..." << std::endl;
+
+    std::unordered_map<BinKey, Bin, BinKeyHasher> &map = binner2.getUnderlyingMap();
+    std::unordered_map<BinKey, Bin, BinKeyHasher> &map2 = binner.getUnderlyingMap();
+    EXPECT_EQ( map.size(), map2.size() );
+    BinKey bk;
+    bk.num_words = 1;
+    bk.num_params = 1;
+    auto search = map.find( bk );
+    EXPECT_NE( search, map.end() );
+    auto search2 = map2.find( bk );
+    EXPECT_NE( search2, map.end() );
+
+    std::vector<std::vector<TokenWordPair> *> &vec = search->second.getBinVector();
+    std::vector<std::vector<TokenWordPair> *> &vec2 = search2->second.getBinVector();
+    EXPECT_EQ( vec.size(), vec2.size() );
+    EXPECT_EQ( vec.size(), 1 );
+    std::vector<TokenWordPair> *recon_line1 = vec.at(0);
+    std::vector<TokenWordPair> *recon_line2 = vec2.at(0);
+    EXPECT_NE( recon_line1, recon_line2 );
+
+    EXPECT_EQ( recon_line1->at(0).tok, recon_line2->at(0).tok );
+    EXPECT_STREQ( recon_line1->at(0).word.c_str(), recon_line2->at(0).word.c_str() );
+    EXPECT_EQ( recon_line1->at(1).tok, recon_line2->at(1).tok );
+    EXPECT_STREQ( recon_line1->at(1).word.c_str(), recon_line2->at(1).word.c_str() );
+    EXPECT_EQ( recon_line1->at(2).tok, recon_line2->at(2).tok );
+    EXPECT_STREQ( recon_line1->at(2).word.c_str(), recon_line2->at(2).word.c_str() );
+
+
+
+
+
 }

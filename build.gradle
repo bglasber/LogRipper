@@ -72,6 +72,11 @@ model {
                 headers.srcDir "/usr/include/"
                 setLinkPathOrAssert( "libpthread.so", false, binaries )
             }
+            boost_serialization {
+                headers.srcDir "/usr/include/"
+                setLinkPathOrAssert( "libboost_serialization.so", false, binaries )
+
+            }
             /*
             folly {
                 setHeaderPathOrAssert( "folly", headers );
@@ -85,6 +90,7 @@ model {
             sources {
                 cpp.lib library: 'glog', linkage: 'shared'
                 cpp.lib library: 'pthread', linkage: 'shared'
+                cpp.lib library: 'boost_serialization', linkage: 'shared'
                 //cpp.lib library: 'folly', linkage: 'shared'
                 cpp {
                     source {
@@ -102,6 +108,7 @@ model {
                 cpp.lib library: 'glog', linkage: 'shared'
                 cpp.lib library: 'gmock', linkage: 'shared'
                 cpp.lib library: 'pthread', linkage: 'shared'
+                cpp.lib library: 'boost_serialization', linkage: 'shared'
                 //cpp.lib library: 'folly', linkage: 'shared'
                 cpp {
                     source {
