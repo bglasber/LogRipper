@@ -116,14 +116,196 @@ void anonymize_client_ids( std::vector<TokenWordPair> *tokens_in_line ) {
 
 void anonymize_location_ids( std::vector<TokenWordPair> *tokens_in_line ) {
     unsigned int i = 0;
-    while( i < tokens_in_line->size() - 1 ) {
+    while( i < tokens_in_line->size() - 2 ) {
         if( tokens_in_line->at(i).tok == WORD &&
             tokens_in_line->at(i).word == "at" ) {
             if( tokens_in_line->at(i+1).tok == NUMBER ) {
                 tokens_in_line->at(i+1).tok = ABSTRACTED_VALUE;
+            } else if( tokens_in_line->at(i+1).tok == WHITE_SPACE &&
+                       tokens_in_line->at(i+2).tok == NUMBER ) {
+                tokens_in_line->at(i+2).tok = ABSTRACTED_VALUE;
             }
         }
         i++;
+    }
+}
+
+void anonymize_write_list( std::vector<TokenWordPair> *tokens_in_line ) {
+    bool anonymized = false;
+    auto iter = tokens_in_line->begin();
+    while( iter != tokens_in_line->end()-3 ) {
+        auto iter_next = std::next( iter );
+        auto iter_next_next = std::next( iter_next );
+        auto iter_next_next_next = std::next( iter_next_next );
+        if( (iter)->tok == PUNCTUATION &&
+            (iter)->word == "[" &&
+                (
+                    ( (iter_next)->tok == PUNCTUATION &&
+                      (iter_next)->word == "{" ) ||
+                    ( (iter_next)->tok == WHITE_SPACE &&
+                      (iter_next_next)->tok == NUMBER &&
+                      (iter_next_next_next)->tok == PUNCTUATION &&
+                      (iter_next_next_next)->word == "," )
+                )
+        ) {
+            break;
+        }
+        iter++;
+    }
+    // We found the array...
+    if( iter != tokens_in_line->end()-3 ) {
+        auto insert_loc = iter;
+        ++iter; //Now the elements of the array
+
+        TokenWordPair twp;
+        twp.tok = ABSTRACTED_VALUE;
+        twp.word = "";
+
+        auto end_delete_loc = iter;
+
+        while( !(end_delete_loc->tok == PUNCTUATION &&
+               end_delete_loc->word == "]") ) {
+            assert( end_delete_loc != tokens_in_line->end() );
+            twp.word += " " + end_delete_loc->word;
+            end_delete_loc++;
+        }
+
+        if( iter != end_delete_loc ) {
+            tokens_in_line->erase( iter, end_delete_loc );
+        }
+
+        insert_loc++;
+        tokens_in_line->insert( insert_loc, std::move( twp ) );
+        anonymized = true;
+    }
+    //Might be more, recurse
+    if( anonymized ) {
+        anonymize_write_list( tokens_in_line );
+    }
+}
+
+void anonymize_decimal( std::vector<TokenWordPair> *tokens_in_line ) {
+
+    auto iter = tokens_in_line->begin();
+    while( iter != tokens_in_line->end()-2 ) {
+        auto iter_next = std::next( iter );
+        auto iter_next_next = std::next( iter_next );
+        if( (iter->tok == NUMBER || iter->tok == ABSTRACTED_VALUE ) &&
+            iter_next->tok == PUNCTUATION &&
+            iter_next->word == "." &&
+            iter_next_next->tok == NUMBER ) {
+            //match!
+            /*
+            std::cout << "Found decimal match..." << std::endl;
+            for( auto it = tokens_in_line->begin(); it != tokens_in_line->end(); it++ ) {
+                std::cout << it->word;
+            }
+            std::cout << std::endl;
+            */
+     
+            break;
+        }
+        iter++;
+    }
+
+    if( iter != tokens_in_line->end()-2 ) {
+        std::cout << "Found decimal match..." << std::endl;
+        for( auto it = tokens_in_line->begin(); it != tokens_in_line->end(); it++ ) {
+            std::cout << it->word;
+        }
+        std::cout << std::endl;
+        TokenWordPair twp;
+        twp.tok = ABSTRACTED_VALUE;
+        twp.word = "";
+
+        auto end_delete_loc = iter;
+        auto insert_loc = iter;
+        insert_loc--;
+
+        for( ;; ) {
+            if( !(end_delete_loc->tok == NUMBER || end_delete_loc->tok == ABSTRACTED_VALUE ) ) {
+                break;
+            }
+            twp.word += " " + end_delete_loc->word;
+            end_delete_loc++;
+
+            if( !(end_delete_loc->tok == PUNCTUATION  &&
+                end_delete_loc->word== ".") ) {
+                break;
+            }
+            twp.word += " " + end_delete_loc->word;
+            end_delete_loc++;
+
+            if( end_delete_loc->tok != NUMBER ) {
+                break;
+            }
+            twp.word += " " + end_delete_loc->word;
+            end_delete_loc++;
+
+             if( !(end_delete_loc->tok == WORD &&
+                   end_delete_loc->word == "e") ) {
+                break;
+            }
+            twp.word += " " + end_delete_loc->word;
+            end_delete_loc++;
+
+            if( !(end_delete_loc->tok == PUNCTUATION &&
+                 ( end_delete_loc->word == "+" ||
+                   end_delete_loc->word == "-") ) ) {
+                break;
+            }
+            twp.word += " " + end_delete_loc->word;
+            end_delete_loc++;
+
+            if( end_delete_loc->tok != NUMBER ) {
+                break;
+            }
+            twp.word += " " + end_delete_loc->word;
+            end_delete_loc++;
+        }
+        tokens_in_line->erase( iter, end_delete_loc );
+        insert_loc++;
+        tokens_in_line->insert( insert_loc, std::move( twp ) );
+    }
+}
+
+void abstract_from_for_number( std::vector<TokenWordPair> *tokens_in_line ) {
+    auto iter = tokens_in_line->begin();
+    while( iter != tokens_in_line->end() - 1 ) {
+        auto iter_next = std::next( iter );
+        auto iter_next_next = std::next( iter_next );
+        if( iter->tok == WORD && ( iter->word == "from" || iter->word == "for" ) &&
+            iter_next->tok == WHITE_SPACE && iter_next_next->tok == NUMBER ) {
+            iter_next_next->tok = ABSTRACTED_VALUE;
+        }
+        iter++;
+    }
+}
+
+void abstract_hostname( std::vector<TokenWordPair> *tokens_in_line ) {
+    auto iter = tokens_in_line->begin();
+    while( iter != tokens_in_line->end() -1 ) {
+        auto iter_next = std::next( iter );
+        if( iter->tok == WORD && iter->word == "tem" &&
+            iter_next->tok == NUMBER ) {
+            iter_next->tok = ABSTRACTED_VALUE;
+        }
+        iter++;
+    }
+}
+
+void abstract_millis( std::vector<TokenWordPair> *tokens_in_line ) {
+    auto iter = tokens_in_line->begin();
+    while( iter != tokens_in_line->end() - 2 ) {
+        auto iter_next = std::next( iter );
+        auto iter_next_next = std::next( iter_next );
+        if( iter->tok == NUMBER &&
+            iter_next->tok == WHITE_SPACE &&
+            iter_next_next->tok == WORD &&
+            iter_next_next->word == "millis" ) {
+            iter->tok = ABSTRACTED_VALUE;
+        }
+        iter++;
     }
 }
 
@@ -143,6 +325,11 @@ int main() {
     rule_funcs.push_back( anonymize_equal_signs );
     rule_funcs.push_back( anonymize_client_ids );
     rule_funcs.push_back( anonymize_location_ids );
+    rule_funcs.push_back( anonymize_write_list );
+    rule_funcs.push_back( anonymize_decimal );
+    rule_funcs.push_back( abstract_from_for_number );
+    rule_funcs.push_back( abstract_hostname );
+    rule_funcs.push_back( abstract_millis );
     RuleApplier rule_applier( std::move( rule_funcs ), &pbe_file_to_rule, &pbe_rule_to_binner );
 
     Binner binner( &pbe_rule_to_binner );
