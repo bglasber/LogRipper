@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
+#include <sys/sysinfo.h>
 #include <thread>
 #include <cstring>
 
@@ -460,6 +461,15 @@ PARSER_MAIN:
                 //Buffer full, make a new one
                 if( buff_done ) {
                     parse_buffer_engine->putNextBuffer( buffer );
+                    struct sysinfo info;
+RECHECK_MEM_AVAIL:
+                    int rc = sysinfo( &info );
+                    assert( rc == 0 );
+                    if( info.freeram < 1024*1000*1000 /* <1 GB of space remaining */ ) {
+                        //throttle so we can clear up some space
+                        std::this_thread::sleep_for( std::chrono::milliseconds(300) );
+                        goto RECHECK_MEM_AVAIL;
+                    }
                     buffer = new ParseBuffer();
                 }
                 tokens_in_line = new std::vector<TokenWordPair>();
