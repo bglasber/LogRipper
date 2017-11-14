@@ -25,7 +25,7 @@ void RuleApplier::processLoop() {
             std::cout << "Rule Applier got null buffer, terminating..." << std::endl;
             return;
         }
-        std::cout << "RAH got another buffer..." << std::endl;
+        //std::cout << "RAH got another buffer..." << std::endl;
         applyRules( buffer );
 
         pbe_out->putNextBuffer( buffer );

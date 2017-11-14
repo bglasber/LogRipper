@@ -75,6 +75,7 @@ void Binner::binEntriesInBuffer( ParseBuffer *buffer ) {
             search->second.insertIntoBin( line );
         }
     }
+    delete buffer;
 }
 
 void Binner::serialize( std::ofstream &os ) {

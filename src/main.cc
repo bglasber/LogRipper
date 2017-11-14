@@ -209,11 +209,6 @@ void anonymize_decimal( std::vector<TokenWordPair> *tokens_in_line ) {
     }
 
     if( iter != tokens_in_line->end()-2 ) {
-        std::cout << "Found decimal match..." << std::endl;
-        for( auto it = tokens_in_line->begin(); it != tokens_in_line->end(); it++ ) {
-            std::cout << it->word;
-        }
-        std::cout << std::endl;
         TokenWordPair twp;
         twp.tok = ABSTRACTED_VALUE;
         twp.word = "";
@@ -271,15 +266,28 @@ void anonymize_decimal( std::vector<TokenWordPair> *tokens_in_line ) {
 
 void abstract_from_for_number( std::vector<TokenWordPair> *tokens_in_line ) {
     auto iter = tokens_in_line->begin();
-    while( iter != tokens_in_line->end() - 1 ) {
+    while( iter != tokens_in_line->end() - 2 ) {
         auto iter_next = std::next( iter );
         auto iter_next_next = std::next( iter_next );
-        if( iter->tok == WORD && ( iter->word == "from" || iter->word == "for" ) &&
+        if( iter->tok == WORD && ( iter->word == "from" || iter->word == "for" || iter->word == "on" ) &&
             iter_next->tok == WHITE_SPACE && iter_next_next->tok == NUMBER ) {
             iter_next_next->tok = ABSTRACTED_VALUE;
         }
         iter++;
     }
+}
+
+void abstract_destination_site( std::vector<TokenWordPair> *tokens_in_line ) {
+    auto iter = tokens_in_line->begin();
+    while( iter != tokens_in_line->end() - 1 ) {
+        auto iter_next = std::next( iter );
+        if( iter->tok == WORD && iter->word == "destination" &&
+            iter_next->tok == NUMBER ) {
+            iter_next->tok = ABSTRACTED_VALUE;
+        }
+        iter++;
+    }
+
 }
 
 void abstract_hostname( std::vector<TokenWordPair> *tokens_in_line ) {
@@ -309,6 +317,99 @@ void abstract_millis( std::vector<TokenWordPair> *tokens_in_line ) {
     }
 }
 
+void abstract_bucket_line1( std::vector<TokenWordPair> *tokens_in_line ) {
+    auto iter = tokens_in_line->begin();
+    while( iter != tokens_in_line->end()-1 ) {
+        auto iter_next = std::next( iter );
+        if( iter->tok == WORD &&
+            iter->word == "Bucket" &&
+            iter_next->tok == PUNCTUATION &&
+            iter_next->word == "[" ) {            
+            break;
+        }
+        iter++;
+    }
+
+    if( iter != tokens_in_line->end()-1 ) {
+        iter++; //After: [
+        auto insert_loc = iter;
+        (void) insert_loc;
+        iter++; //After: Stuff in bracket
+
+        TokenWordPair twp;
+        twp.tok = ABSTRACTED_VALUE;
+        twp.word = "";
+        auto end_delete_loc = iter;
+        while( !(end_delete_loc->tok == PUNCTUATION &&
+               end_delete_loc->word == "]") ) {
+            assert( end_delete_loc != tokens_in_line->end() );
+            twp.word += " " + end_delete_loc->word;
+            end_delete_loc++;
+        }
+
+
+
+        tokens_in_line->erase( iter, end_delete_loc );
+        insert_loc++;
+        tokens_in_line->insert( insert_loc, std::move( twp ) );
+
+        iter = insert_loc; //The abstracted token
+        iter++; //The ] bracket
+        assert( iter != tokens_in_line->end() );
+        iter++; //whitespace
+        assert( iter != tokens_in_line->end() );
+        insert_loc = iter;
+        iter++; //Start of stuff to abstract
+        assert( iter != tokens_in_line->end() );
+        
+        TokenWordPair twp2;
+        twp2.tok = ABSTRACTED_VALUE;
+        twp2.word = "";
+        end_delete_loc = iter;
+        for( ;; ) {
+            assert( end_delete_loc != tokens_in_line->end() );
+            if( end_delete_loc->tok == WORD && end_delete_loc->word == "is" ) {
+                end_delete_loc--; //WHITESPACE, thing before it should be entry
+                break;
+            }
+            twp2.word += " " + end_delete_loc->word;
+            end_delete_loc++;
+        }
+
+
+        tokens_in_line->erase( iter, end_delete_loc );
+        insert_loc++;
+        tokens_in_line->insert( insert_loc, std::move( twp2 ) );
+
+
+        auto iter = insert_loc;
+        while( !(iter->tok == WORD && iter->word == "site") ) {
+            iter++;
+        }
+        iter++; //hop to whitespace
+        iter++; //hop to number
+        assert( iter->tok == NUMBER );
+        iter->tok = ABSTRACTED_VALUE;
+    }
+}
+
+void abstract_client_locks_number( std::vector<TokenWordPair> *tokens_in_line ) {
+    auto iter = tokens_in_line->begin();
+    while( iter != tokens_in_line->end()-1 ) {
+        if( iter->tok == WORD && iter->word == "locks" ) {
+            break;
+        }
+        iter++;
+    }
+
+    if( iter != tokens_in_line->end()-1 ) {
+        iter++;
+        if( iter->tok == NUMBER ) {
+            iter->tok = ABSTRACTED_VALUE;
+        }
+    }
+}
+
 int main() {
 
     int fd = open( "ssServer.log.short", O_RDONLY ); 
@@ -330,6 +431,9 @@ int main() {
     rule_funcs.push_back( abstract_from_for_number );
     rule_funcs.push_back( abstract_hostname );
     rule_funcs.push_back( abstract_millis );
+    rule_funcs.push_back( abstract_bucket_line1 );
+    rule_funcs.push_back( abstract_client_locks_number );
+    rule_funcs.push_back( abstract_destination_site );
     RuleApplier rule_applier( std::move( rule_funcs ), &pbe_file_to_rule, &pbe_rule_to_binner );
 
     Binner binner( &pbe_rule_to_binner );

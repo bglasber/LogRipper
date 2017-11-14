@@ -238,7 +238,7 @@ void FileReader::asyncReloadBuffers( ) {
             bytes_in_last_buff = bytes_read % fs_blksize;
             break;
         }
-        std::cout << "Async reloaded buffer half: " << load_half << std::endl;
+        //std::cout << "Async reloaded buffer half: " << load_half << std::endl;
         load_half = (load_half + 1) % 2;
         async_reload = false;
     }
@@ -280,7 +280,7 @@ void FileReader::processFile( ) {
     std::vector<TokenWordPair> *tokens_in_line = new std::vector<TokenWordPair>();
     for( ;; ) {
         if( buff_idx >= fs_blksize ) {
-            std::cout << "Wrapping around on buffers..." << std::endl;
+            //std::cout << "Wrapping around on buffers..." << std::endl;
             buff_idx = 0;
             buffer_id_to_process++;
             buff = buffer_pool->buff_ptrs[buffer_id_to_process == num_buffers ? 0 : buffer_id_to_process ];
@@ -335,6 +335,7 @@ void FileReader::processFile( ) {
                         //No need to block on async reloads, that thread is shut down
                         goto PARSER_MAIN;
                     }
+                    std::this_thread::yield();
                         //std::cout << "Warning... waiting for buffers!" << std::endl;
                 }
                 if( done_flag ) {
@@ -395,6 +396,7 @@ void FileReader::processFile( ) {
                         buffer_id_to_process = 0;
                         goto PARSER_MAIN;
                     }
+                    std::this_thread::yield();
                 }
                 if( done_flag ) {
                     break;
