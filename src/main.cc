@@ -202,7 +202,7 @@ void anonymize_decimal( std::vector<TokenWordPair> *tokens_in_line ) {
             }
             std::cout << std::endl;
             */
-     
+
             break;
         }
         iter++;

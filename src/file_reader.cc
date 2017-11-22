@@ -465,9 +465,10 @@ PARSER_MAIN:
 RECHECK_MEM_AVAIL:
                     int rc = sysinfo( &info );
                     assert( rc == 0 );
-                    if( info.freeram < 1024*1000*1000 /* <1 GB of space remaining */ ) {
+                    if( info.freeram < 1024*1000*100 /* <100 MB of space remaining */ ) {
                         //throttle so we can clear up some space
                         std::this_thread::sleep_for( std::chrono::milliseconds(300) );
+                        std::cout << "FR: waiting for memory to be available..." << std::endl;
                         goto RECHECK_MEM_AVAIL;
                     }
                     buffer = new ParseBuffer();

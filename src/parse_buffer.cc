@@ -1,5 +1,8 @@
 #include "parse_buffer.h"
 #include <cassert>
+#include <thread>
+#include <chrono>
+#include <iostream>
 
 ParseBuffer::ParseBuffer() {
     ind = 0;
@@ -57,9 +60,23 @@ ParseBuffer *ParseBufferEngine::getNextBuffer() {
 }
 
 void ParseBufferEngine::putNextBuffer( ParseBuffer *buff ) {
-    std::unique_lock<std::mutex> lk( mut );
-    ready_buffers.push_back( buff );
-    cv.notify_one();
+RETRY:
+    bool full = false;
+    {
+        std::unique_lock<std::mutex> lk( mut );
+        if( ready_buffers.size() < 1000 ) {
+            ready_buffers.push_back( buff );
+            cv.notify_one();
+        } else {
+            full = true;
+        }
+    }
+    //Back off
+    if( full ) {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 300 ) );
+        std::cout << "Backing off." << std::endl;
+        goto RETRY;
+    }
 }
 
 
