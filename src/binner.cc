@@ -68,7 +68,6 @@ void Bin::insertIntoBin( std::vector<TokenWordPair> *line ) {
         LineWithTransitions lwt( *line );
         unique_entries_in_bin.emplace_back( std::move( lwt ) );
     }
-    delete line;
 }
 
 bool Bin::vectorMatch( std::vector<TokenWordPair> *line1, std::vector<TokenWordPair> *line2 ) {
@@ -83,6 +82,13 @@ bool Bin::vectorMatch( std::vector<TokenWordPair> *line1, std::vector<TokenWordP
             return false;
         }
     } return true;
+}
+
+static uint64_t get_thread_id_from_parsed_line( std::vector<TokenWordPair> *line ) {
+    if( line->size() < 12 ) {
+        return 0;
+    }
+    return atoi(line->at(11).word.c_str());
 }
 
 void Binner::binEntriesInBuffer( ParseBuffer *buffer ) {
@@ -114,6 +120,9 @@ void Binner::binEntriesInBuffer( ParseBuffer *buffer ) {
             assert( search != bin_map.end() );
             search->second.insertIntoBin( line );
         }
+        //Update last found line
+        last_lines.addNewLine( get_thread_id_from_parsed_line( line ), *line );
+        delete line;
     }
     delete buffer;
 }
