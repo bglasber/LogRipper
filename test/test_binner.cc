@@ -42,7 +42,7 @@ TEST( test_binner, test_binner_keys_single_word_entry_correctly ) {
     EXPECT_EQ( vec.at(0), line );
 
     //The lines will be destroyed when the binner shuts down
-    delete buffer;
+    //delete buffer;
 }
 
 TEST( test_binner, test_binner_keys_different_word_size_different_buckets ) {
@@ -95,7 +95,7 @@ TEST( test_binner, test_binner_keys_different_word_size_different_buckets ) {
     EXPECT_EQ( vec2.size(), 1 );
     EXPECT_EQ( vec2.at(0), line2 );
 
-    delete buffer;
+    //delete buffer;
 }
 
 TEST( test_binner, same_entry_word_match_removed ) {
@@ -140,7 +140,7 @@ TEST( test_binner, same_entry_word_match_removed ) {
     EXPECT_EQ( vec.size(), 1 );
     EXPECT_EQ( vec.at(0), line );
 
-    delete buffer;
+    //delete buffer;
 }
 
 TEST( test_binner, same_entry_word_mismatch_kept ) {
@@ -186,7 +186,7 @@ TEST( test_binner, same_entry_word_mismatch_kept ) {
     EXPECT_EQ( vec.at(0), line );
     EXPECT_EQ( vec.at(1), line2 );
 
-    delete buffer;
+    //delete buffer;
 }
 
 TEST( test_binner, same_word_different_params ) {
@@ -240,7 +240,7 @@ TEST( test_binner, same_word_different_params ) {
     EXPECT_EQ( vec2.size(), 1 );
     EXPECT_EQ( vec2.at(0), line2 );
 
-    delete buffer;
+    //delete buffer;
 }
 
 TEST( test_binner, no_match_abstracted_vals ) {
@@ -290,7 +290,7 @@ TEST( test_binner, no_match_abstracted_vals ) {
     EXPECT_EQ( vec.size(), 1 );
     EXPECT_EQ( vec.at(0), line );
 
-    delete buffer;
+    //delete buffer;
 }
 
 TEST( test_binner, test_serialize ) {
@@ -366,9 +366,4 @@ TEST( test_binner, test_serialize ) {
     EXPECT_STREQ( recon_line1->at(1).word.c_str(), recon_line2->at(1).word.c_str() );
     EXPECT_EQ( recon_line1->at(2).tok, recon_line2->at(2).tok );
     EXPECT_STREQ( recon_line1->at(2).word.c_str(), recon_line2->at(2).word.c_str() );
-
-
-
-
-
 }
