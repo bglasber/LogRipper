@@ -7,6 +7,41 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 
+void LineTransitions::addTransition( std::vector<TokenWordPair> *other_line ) {
+    LineKey lk( *other_line );
+    auto search = transitions.find( lk );
+    if( search != transitions.end() ) {
+        std::pair<std::vector<TokenWordPair>, uint64_t> &entry = search->second;
+        entry.second++;
+    } else {
+        auto inner_pair = std::make_pair( *other_line, 1 );
+        auto outer_pair = std::make_pair( std::move( lk ), std::move( inner_pair ) );
+        transitions.emplace( std::move( outer_pair ) );
+    }
+}
+
+void LineWithTransitions::addTransition( std::vector<TokenWordPair> *other_line ) {
+    times_seen++;
+    return lt.addTransition( other_line );
+}
+
+uint64_t LineTransitions::getTransitionCount( std::vector<TokenWordPair> &line ) {
+    LineKey lk( line );
+    auto search = transitions.find( lk );
+    if( search != transitions.end() ) {
+        std::pair<std::vector<TokenWordPair>, uint64_t> &entry = search->second;
+        return entry.second;
+    }
+    return 0;
+}
+
+double LineWithTransitions::getTransitionProbability( std::vector<TokenWordPair> &line ) {
+    if( times_seen != 0 ) {
+        return (double) lt.getTransitionCount( line ) / times_seen;
+    }
+    return 0;
+}
+
 //Destroying bins like this breaks deserialization if you put it in the default destructor
 //Bypass it by making a separate function
 void Bin::destroyBinEntries( ) {

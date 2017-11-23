@@ -2,9 +2,49 @@
 #include "parse_buffer.h"
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/vector.hpp>
+#include <boost/functional/hash.hpp>
 #include <cstdint>
 #include <unordered_map>
 #include <fstream>
+#include <vector>
+#include <list>
+
+struct LineKey {
+    std::vector<TokenWordPair> line;
+    LineKey() {}
+    LineKey( const std::vector<TokenWordPair> &line ) : line( line ) { }
+
+    bool operator==( const LineKey &other ) const {
+        return line == other.line;
+    }
+};
+
+struct LineKeyHasher {
+    std::size_t operator()( const LineKey &lk ) const {
+        std::size_t seed = 0;
+        for( const auto &twp : lk.line ) {
+            boost::hash_combine( seed, twp.tok );
+        }
+        return seed;
+    }
+};
+
+class LineTransitions {
+    std::unordered_map<LineKey, std::pair<std::vector<TokenWordPair>, uint64_t>, LineKeyHasher> transitions;
+public:
+    void addTransition( std::vector<TokenWordPair> *other_line );
+    uint64_t getTransitionCount( std::vector<TokenWordPair> &line );
+};
+
+class LineWithTransitions {
+    std::vector<TokenWordPair>  line;
+    LineTransitions             lt;
+    uint64_t                    times_seen;
+public:
+    LineWithTransitions( std::vector<TokenWordPair> &line ) : line( line ), times_seen( 0 ) {}
+    void addTransition( std::vector<TokenWordPair> *other_line );
+    double getTransitionProbability( std::vector<TokenWordPair> &line );
+};
 
 struct BinKey {
     friend class boost::serialization::access;

@@ -3,6 +3,7 @@
 #include <string>
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/string.hpp>
+#include <boost/functional/hash.hpp>
 
 enum Token {
     START = 0,
@@ -30,10 +31,24 @@ struct TokenWordPair {
     }
     TokenWordPair( Token &tok, std::string &word ) : tok( tok ), word( word ) { }
 
+    bool operator==( const TokenWordPair &other ) const {
+        return tok == other.tok && word == other.word;
+    }
+
     template<class Archive>
         void serialize( Archive &ar, const unsigned int version ) {
             ar & tok;
             ar & word;
         }
 };
+
+/*
+inline std::size_t hash_value( const TokenWordPair &twp ) {
+    std::size_t seed = 0;
+    boost::hash_combine( seed, twp.tok );
+    boost::hash_combine( seed, twp.word );
+    return seed;
+}
+*/
+
 #endif

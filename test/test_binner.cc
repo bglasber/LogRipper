@@ -367,3 +367,21 @@ TEST( test_binner, test_serialize ) {
     EXPECT_EQ( recon_line1->at(2).tok, recon_line2->at(2).tok );
     EXPECT_STREQ( recon_line1->at(2).word.c_str(), recon_line2->at(2).word.c_str() );
 }
+
+TEST( test_transition_counter, create_counter ) {
+    std::vector<TokenWordPair> line;
+    TokenWordPair twp;
+    twp.tok = WORD;
+    twp.word = "TEST";
+    line.push_back( twp );
+    twp.tok = ABSTRACTED_VALUE;
+    line.push_back( twp );
+    twp.tok = NEW_LINE;
+    twp.word = "\n";
+    line.push_back( twp );
+
+    LineWithTransitions lwt( line );
+    EXPECT_EQ( lwt.getTransitionProbability( line ), 0.0 );
+    lwt.addTransition( &line );
+    EXPECT_EQ( lwt.getTransitionProbability( line ), 1.0 );
+}
