@@ -42,6 +42,19 @@ double LineWithTransitions::getTransitionProbability( std::vector<TokenWordPair>
     return 0;
 }
 
+std::vector<TokenWordPair> *LastLineForEachThread::getLastLine( uint64_t thread_id ) {
+    auto search = last_lines.find( thread_id );
+    if( search != last_lines.end() ) {
+        return &(search->second);
+    }
+    return nullptr;
+}
+
+void LastLineForEachThread::addNewLine( uint64_t thread_id, std::vector<TokenWordPair> &line ) {
+    std::vector<TokenWordPair> line_copy( line );
+    last_lines.insert_or_assign( std::move( thread_id ), std::move( line_copy ) );
+}
+
 void Bin::insertIntoBin( std::vector<TokenWordPair> *line ) {
     bool found_match = false;
     for( LineWithTransitions line_in_bucket : unique_entries_in_bin ) {

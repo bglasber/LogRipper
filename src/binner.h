@@ -70,6 +70,14 @@ public:
     }
 };
 
+class LastLineForEachThread {
+    std::unordered_map<uint64_t, std::vector<TokenWordPair>> last_lines;
+public:
+    LastLineForEachThread() {}
+    std::vector<TokenWordPair> *getLastLine( uint64_t thread_id );
+    void addNewLine( uint64_t thread_id, std::vector<TokenWordPair> &line );
+};
+
 struct BinKey {
     friend class boost::serialization::access;
     template<class Archive>
@@ -118,6 +126,7 @@ public:
 
 class Binner {
     std::unordered_map<BinKey, Bin, BinKeyHasher> bin_map;
+    LastLineForEachThread last_lines;
     ParseBufferEngine *pbe_in;
     volatile bool done;
 
