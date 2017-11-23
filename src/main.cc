@@ -454,10 +454,11 @@ int main() {
 
     unsigned num_unique_entries = 0;
     for( auto it = map.begin(); it != map.end(); it++ ) {
-        std::vector<std::vector<TokenWordPair> *> &vec = it->second.getBinVector();
+        std::vector<LineWithTransitions> &vec = it->second.getBinVector();
         std::cout << "Bucket Entries: " << std::endl;
         for( auto it2 = vec.begin(); it2 != vec.end(); it2++ ) {
-            for( auto it3 = (*it2)->begin(); it3 != (*it2)->end(); it3++ ) {
+            std::vector<TokenWordPair> &l = it2->getLine();
+            for( auto it3 = l.begin(); it3 != l.end(); it3++ ) {
                 std::cout << it3->word << " ";
             }
             std::cout << std::endl;

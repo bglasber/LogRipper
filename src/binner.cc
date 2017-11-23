@@ -7,20 +7,20 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 
-void LineTransitions::addTransition( std::vector<TokenWordPair> *other_line ) {
-    LineKey lk( *other_line );
+void LineTransitions::addTransition( std::vector<TokenWordPair> &other_line ) {
+    LineKey lk( other_line );
     auto search = transitions.find( lk );
     if( search != transitions.end() ) {
         std::pair<std::vector<TokenWordPair>, uint64_t> &entry = search->second;
         entry.second++;
     } else {
-        auto inner_pair = std::make_pair( *other_line, 1 );
+        auto inner_pair = std::make_pair( other_line, 1 );
         auto outer_pair = std::make_pair( std::move( lk ), std::move( inner_pair ) );
         transitions.emplace( std::move( outer_pair ) );
     }
 }
 
-void LineWithTransitions::addTransition( std::vector<TokenWordPair> *other_line ) {
+void LineWithTransitions::addTransition( std::vector<TokenWordPair> &other_line ) {
     times_seen++;
     return lt.addTransition( other_line );
 }
@@ -42,28 +42,20 @@ double LineWithTransitions::getTransitionProbability( std::vector<TokenWordPair>
     return 0;
 }
 
-//Destroying bins like this breaks deserialization if you put it in the default destructor
-//Bypass it by making a separate function
-void Bin::destroyBinEntries( ) {
-    for( unsigned int i = 0; i < unique_entries_in_bin.size(); i++ ) {
-        delete unique_entries_in_bin.at(i);
-    }
-}
-
 void Bin::insertIntoBin( std::vector<TokenWordPair> *line ) {
     bool found_match = false;
-    for( std::vector<TokenWordPair> *line_in_bucket : unique_entries_in_bin ) {
-        found_match = vectorMatch( line_in_bucket, line );
+    for( LineWithTransitions line_in_bucket : unique_entries_in_bin ) {
+        found_match = vectorMatch( &line_in_bucket.getLine(), line );
         if( found_match ) {
             break;
         }
     }
     if( !found_match ) {
-        unique_entries_in_bin.push_back( line );
-    } else {
-        //There's already one of these, destroy the string
-        delete line;
+        //Copy line in
+        LineWithTransitions lwt( *line );
+        unique_entries_in_bin.emplace_back( std::move( lwt ) );
     }
+    delete line;
 }
 
 bool Bin::vectorMatch( std::vector<TokenWordPair> *line1, std::vector<TokenWordPair> *line2 ) {
@@ -124,9 +116,6 @@ void Binner::deserialize( std::ifstream &is ) {
 }
 
 Binner::~Binner() {
-    for( auto it = bin_map.begin(); it != bin_map.end(); it++ ) {
-        it->second.destroyBinEntries();
-    }
 }
 
 void Binner::processLoop() {

@@ -28,6 +28,9 @@ TEST( test_binner, test_binner_keys_single_word_entry_correctly ) {
 
     buffer->addLine( line );
 
+    //Create copy locally
+    std::vector<TokenWordPair> line2( *line );
+
     binner.binEntriesInBuffer( buffer );
     std::unordered_map<BinKey, Bin, BinKeyHasher> &map = binner.getUnderlyingMap();
 
@@ -37,9 +40,9 @@ TEST( test_binner, test_binner_keys_single_word_entry_correctly ) {
     auto search = map.find( bk );
 
     EXPECT_NE( search, map.end() );
-    std::vector<std::vector<TokenWordPair> *> &vec = search->second.getBinVector();
+    std::vector<LineWithTransitions> &vec = search->second.getBinVector();
     EXPECT_EQ( vec.size(), 1 );
-    EXPECT_EQ( vec.at(0), line );
+    EXPECT_EQ( vec.at(0).getLine(), line2 );
 
     //The lines will be destroyed when the binner shuts down
     //delete buffer;
@@ -62,6 +65,8 @@ TEST( test_binner, test_binner_keys_different_word_size_different_buckets ) {
     line->push_back( twp );
     buffer->addLine( line );
 
+    std::vector<TokenWordPair> loc_line1( *line );
+
     //Two words
     std::vector<TokenWordPair> *line2 = new std::vector<TokenWordPair>();
     twp.tok = WORD;
@@ -70,8 +75,11 @@ TEST( test_binner, test_binner_keys_different_word_size_different_buckets ) {
     line2->push_back( twp );
     twp.tok = NEW_LINE;
     twp.word = "\n";
-    line->push_back( twp );
+    line2->push_back( twp );
     buffer->addLine( line2 );
+
+
+    std::vector<TokenWordPair> loc_line2( *line2 );
 
     binner.binEntriesInBuffer( buffer );
     std::unordered_map<BinKey, Bin, BinKeyHasher> &map = binner.getUnderlyingMap();
@@ -84,16 +92,16 @@ TEST( test_binner, test_binner_keys_different_word_size_different_buckets ) {
     auto search = map.find( bk );
 
     EXPECT_NE( search, map.end() );
-    std::vector<std::vector<TokenWordPair> *> &vec = search->second.getBinVector();
+    std::vector<LineWithTransitions> &vec = search->second.getBinVector();
     EXPECT_EQ( vec.size(), 1 );
-    EXPECT_EQ( vec.at(0), line );
+    EXPECT_EQ( vec.at(0).getLine(), loc_line1 );
 
     bk.num_words = 2;
     search = map.find( bk );
     EXPECT_NE( search, map.end() );
-    std::vector<std::vector<TokenWordPair> *> &vec2 = search->second.getBinVector();
+    std::vector<LineWithTransitions> &vec2 = search->second.getBinVector();
     EXPECT_EQ( vec2.size(), 1 );
-    EXPECT_EQ( vec2.at(0), line2 );
+    EXPECT_EQ( vec2.at(0).getLine(), loc_line2 );
 
     //delete buffer;
 }
@@ -114,6 +122,7 @@ TEST( test_binner, same_entry_word_match_removed ) {
     twp.word = "\n";
     line->push_back( twp );
     buffer->addLine( line );
+    std::vector<TokenWordPair> loc_line1( *line );
 
     //Different line, but same content
     std::vector<TokenWordPair> *line2 = new std::vector<TokenWordPair>();
@@ -136,9 +145,9 @@ TEST( test_binner, same_entry_word_match_removed ) {
     auto search = map.find( bk );
 
     EXPECT_NE( search, map.end() );
-    std::vector<std::vector<TokenWordPair> *> &vec = search->second.getBinVector();
+    std::vector<LineWithTransitions> &vec = search->second.getBinVector();
     EXPECT_EQ( vec.size(), 1 );
-    EXPECT_EQ( vec.at(0), line );
+    EXPECT_EQ( vec.at(0).getLine(), loc_line1 );
 
     //delete buffer;
 }
@@ -159,6 +168,7 @@ TEST( test_binner, same_entry_word_mismatch_kept ) {
     twp.word = "\n";
     line->push_back( twp );
     buffer->addLine( line );
+    std::vector<TokenWordPair> loc_line1( *line );
 
     //Different line, but same content
     std::vector<TokenWordPair> *line2 = new std::vector<TokenWordPair>();
@@ -169,6 +179,7 @@ TEST( test_binner, same_entry_word_mismatch_kept ) {
     twp.word = "\n";
     line2->push_back( twp );
     buffer->addLine( line2 );
+    std::vector<TokenWordPair> loc_line2( *line2 );
 
     binner.binEntriesInBuffer( buffer );
     std::unordered_map<BinKey, Bin, BinKeyHasher> &map = binner.getUnderlyingMap();
@@ -181,10 +192,10 @@ TEST( test_binner, same_entry_word_mismatch_kept ) {
     auto search = map.find( bk );
 
     EXPECT_NE( search, map.end() );
-    std::vector<std::vector<TokenWordPair> *> &vec = search->second.getBinVector();
+    std::vector<LineWithTransitions> &vec = search->second.getBinVector();
     EXPECT_EQ( vec.size(), 2 );
-    EXPECT_EQ( vec.at(0), line );
-    EXPECT_EQ( vec.at(1), line2 );
+    EXPECT_EQ( vec.at(0).getLine(), loc_line1 );
+    EXPECT_EQ( vec.at(1).getLine(), loc_line2 );
 
     //delete buffer;
 }
@@ -205,6 +216,7 @@ TEST( test_binner, same_word_different_params ) {
     twp.word = "\n";
     line->push_back( twp );
     buffer->addLine( line );
+    std::vector<TokenWordPair> loc_line1( *line );
 
     //Different line, but same content
     std::vector<TokenWordPair> *line2 = new std::vector<TokenWordPair>();
@@ -217,6 +229,7 @@ TEST( test_binner, same_word_different_params ) {
     twp.word = "\n";
     line2->push_back( twp );
     buffer->addLine( line2 );
+    std::vector<TokenWordPair> loc_line2( *line2 );
 
     binner.binEntriesInBuffer( buffer );
     std::unordered_map<BinKey, Bin, BinKeyHasher> &map = binner.getUnderlyingMap();
@@ -229,16 +242,16 @@ TEST( test_binner, same_word_different_params ) {
     auto search = map.find( bk );
 
     EXPECT_NE( search, map.end() );
-    std::vector<std::vector<TokenWordPair> *> &vec = search->second.getBinVector();
+    std::vector<LineWithTransitions> &vec = search->second.getBinVector();
     EXPECT_EQ( vec.size(), 1 );
-    EXPECT_EQ( vec.at(0), line );
+    EXPECT_EQ( vec.at(0).getLine(), loc_line1 );
 
     bk.num_params = 1;
     search = map.find( bk );
     EXPECT_NE( search, map.end() );
-    std::vector<std::vector<TokenWordPair> *> &vec2 = search->second.getBinVector();
+    std::vector<LineWithTransitions> &vec2 = search->second.getBinVector();
     EXPECT_EQ( vec2.size(), 1 );
-    EXPECT_EQ( vec2.at(0), line2 );
+    EXPECT_EQ( vec2.at(0).getLine(), loc_line2 );
 
     //delete buffer;
 }
@@ -262,6 +275,7 @@ TEST( test_binner, no_match_abstracted_vals ) {
     twp.word = "\n";
     line->push_back( twp );
     buffer->addLine( line );
+    std::vector<TokenWordPair> loc_line1( *line );
 
     //Different line, but same content
     std::vector<TokenWordPair> *line2 = new std::vector<TokenWordPair>();
@@ -286,9 +300,9 @@ TEST( test_binner, no_match_abstracted_vals ) {
     auto search = map.find( bk );
 
     EXPECT_NE( search, map.end() );
-    std::vector<std::vector<TokenWordPair> *> &vec = search->second.getBinVector();
+    std::vector<LineWithTransitions> &vec = search->second.getBinVector();
     EXPECT_EQ( vec.size(), 1 );
-    EXPECT_EQ( vec.at(0), line );
+    EXPECT_EQ( vec.at(0).getLine(), loc_line1 );
 
     //delete buffer;
 }
@@ -352,20 +366,20 @@ TEST( test_binner, test_serialize ) {
     auto search2 = map2.find( bk );
     EXPECT_NE( search2, map.end() );
 
-    std::vector<std::vector<TokenWordPair> *> &vec = search->second.getBinVector();
-    std::vector<std::vector<TokenWordPair> *> &vec2 = search2->second.getBinVector();
+    std::vector<LineWithTransitions> &vec = search->second.getBinVector();
+    std::vector<LineWithTransitions> &vec2 = search2->second.getBinVector();
     EXPECT_EQ( vec.size(), vec2.size() );
     EXPECT_EQ( vec.size(), 1 );
-    std::vector<TokenWordPair> *recon_line1 = vec.at(0);
-    std::vector<TokenWordPair> *recon_line2 = vec2.at(0);
-    EXPECT_NE( recon_line1, recon_line2 );
+    std::vector<TokenWordPair> &recon_line1 = vec.at(0).getLine();
+    std::vector<TokenWordPair> &recon_line2 = vec2.at(0).getLine();
+    EXPECT_NE( &recon_line1, &recon_line2 );
 
-    EXPECT_EQ( recon_line1->at(0).tok, recon_line2->at(0).tok );
-    EXPECT_STREQ( recon_line1->at(0).word.c_str(), recon_line2->at(0).word.c_str() );
-    EXPECT_EQ( recon_line1->at(1).tok, recon_line2->at(1).tok );
-    EXPECT_STREQ( recon_line1->at(1).word.c_str(), recon_line2->at(1).word.c_str() );
-    EXPECT_EQ( recon_line1->at(2).tok, recon_line2->at(2).tok );
-    EXPECT_STREQ( recon_line1->at(2).word.c_str(), recon_line2->at(2).word.c_str() );
+    EXPECT_EQ( recon_line1.at(0).tok, recon_line2.at(0).tok );
+    EXPECT_STREQ( recon_line1.at(0).word.c_str(), recon_line2.at(0).word.c_str() );
+    EXPECT_EQ( recon_line1.at(1).tok, recon_line2.at(1).tok );
+    EXPECT_STREQ( recon_line1.at(1).word.c_str(), recon_line2.at(1).word.c_str() );
+    EXPECT_EQ( recon_line1.at(2).tok, recon_line2.at(2).tok );
+    EXPECT_STREQ( recon_line1.at(2).word.c_str(), recon_line2.at(2).word.c_str() );
 }
 
 TEST( test_transition_counter, create_simple_counter ) {
@@ -382,7 +396,7 @@ TEST( test_transition_counter, create_simple_counter ) {
 
     LineWithTransitions lwt( line );
     EXPECT_EQ( lwt.getTransitionProbability( line ), 0.0 );
-    lwt.addTransition( &line );
+    lwt.addTransition( line );
     EXPECT_EQ( lwt.getTransitionProbability( line ), 1.0 );
 }
 
@@ -411,9 +425,9 @@ TEST( test_transition_counter, multiple_transitions ) {
 
     LineWithTransitions lwt( line );
     EXPECT_EQ( lwt.getTransitionProbability( line ), 0.0 );
-    lwt.addTransition( &line );
+    lwt.addTransition( line );
     EXPECT_EQ( lwt.getTransitionProbability( line ), 1.0 );
-    lwt.addTransition( &line2 );
+    lwt.addTransition( line2 );
     EXPECT_EQ( lwt.getTransitionProbability( line ), 0.5 );
     EXPECT_EQ( lwt.getTransitionProbability( line2 ), 0.5 );
 }
@@ -444,16 +458,16 @@ TEST( test_transition_counter, multiple_lines_and_transitions ) {
     LineWithTransitions lwt( line );
     LineWithTransitions lwt2( line2 );
     EXPECT_EQ( lwt.getTransitionProbability( line ), 0.0 );
-    lwt.addTransition( &line );
+    lwt.addTransition( line );
     EXPECT_EQ( lwt.getTransitionProbability( line ), 1.0 );
-    lwt.addTransition( &line2 );
+    lwt.addTransition( line2 );
     EXPECT_EQ( lwt.getTransitionProbability( line ), 0.5 );
     EXPECT_EQ( lwt.getTransitionProbability( line2 ), 0.5 );
 
     EXPECT_EQ( lwt2.getTransitionProbability( line ), 0.0 );
-    lwt2.addTransition( &line );
+    lwt2.addTransition( line );
     EXPECT_EQ( lwt2.getTransitionProbability( line ), 1.0 );
-    lwt2.addTransition( &line2 );
+    lwt2.addTransition( line2 );
     EXPECT_EQ( lwt2.getTransitionProbability( line ), 0.5 );
     EXPECT_EQ( lwt2.getTransitionProbability( line2 ), 0.5 );
 }

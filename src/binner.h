@@ -10,6 +10,11 @@
 #include <list>
 
 struct LineKey {
+    friend class boost::serialization::access;
+    template <class Archive>
+        void serialize( Archive &ar, const unsigned int version ) {
+            ar & line;
+        }
     std::vector<TokenWordPair> line;
     LineKey() {}
     LineKey( const std::vector<TokenWordPair> &line ) : line( line ) { }
@@ -30,20 +35,39 @@ struct LineKeyHasher {
 };
 
 class LineTransitions {
+    friend class boost::serialization::access;
+    template <class Archive>
+        void serialize( Archive &ar, const unsigned int version ) {
+            ar & transitions;
+        }
     std::unordered_map<LineKey, std::pair<std::vector<TokenWordPair>, uint64_t>, LineKeyHasher> transitions;
 public:
-    void addTransition( std::vector<TokenWordPair> *other_line );
+    LineTransitions() {}
+    LineTransitions( const std::unordered_map<LineKey, std::pair<std::vector<TokenWordPair>, uint64_t>, LineKeyHasher> &transitions ) : transitions( transitions ) {}
+    void addTransition( std::vector<TokenWordPair> &other_line );
     uint64_t getTransitionCount( std::vector<TokenWordPair> &line );
 };
 
 class LineWithTransitions {
+    friend class boost::serialization::access;
+    template <class Archive>
+        void serialize( Archive &ar, const unsigned int version ) {
+            ar & line;
+            ar & lt;
+            ar & times_seen;
+        }
     std::vector<TokenWordPair>  line;
     LineTransitions             lt;
     uint64_t                    times_seen;
 public:
+    LineWithTransitions(): times_seen( 0 ) { }
     LineWithTransitions( std::vector<TokenWordPair> &line ) : line( line ), times_seen( 0 ) {}
-    void addTransition( std::vector<TokenWordPair> *other_line );
+    LineWithTransitions( std::vector<TokenWordPair> &line, LineTransitions &lt, uint64_t &times_seen ) : line( line ), lt( lt ), times_seen( times_seen ) {}
+    void addTransition( std::vector<TokenWordPair> &other_line );
     double getTransitionProbability( std::vector<TokenWordPair> &line );
+    std::vector<TokenWordPair> &getLine() {
+        return line;
+    }
 };
 
 struct BinKey {
@@ -81,14 +105,13 @@ class Bin {
         void serialize( Archive &ar, const unsigned int version ) {
             ar & unique_entries_in_bin;
         }
-    std::vector<std::vector<TokenWordPair> *> unique_entries_in_bin;
+    std::vector<LineWithTransitions> unique_entries_in_bin;
 public:
     Bin() {}
-    Bin( std::vector<std::vector<TokenWordPair> *> &unique_entries_in_bin ) : unique_entries_in_bin( unique_entries_in_bin ) {}
+    Bin( std::vector<LineWithTransitions> &unique_entries_in_bin ) : unique_entries_in_bin( unique_entries_in_bin ) {}
     void insertIntoBin( std::vector<TokenWordPair> *line );
-    void destroyBinEntries();
     bool vectorMatch( std::vector<TokenWordPair> *line1, std::vector<TokenWordPair> *line2 );
-    std::vector<std::vector<TokenWordPair> *> &getBinVector() {
+    std::vector<LineWithTransitions> &getBinVector() {
         return unique_entries_in_bin;
     }
 };
