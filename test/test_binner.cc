@@ -471,3 +471,106 @@ TEST( test_transition_counter, multiple_lines_and_transitions ) {
     EXPECT_EQ( lwt2.getTransitionProbability( line ), 0.5 );
     EXPECT_EQ( lwt2.getTransitionProbability( line2 ), 0.5 );
 }
+
+TEST( test_binner, computes_transitions_among_single_thread ) {
+    std::vector<TokenWordPair> line;
+    TokenWordPair twp;
+    twp.tok = WORD;
+    twp.word = "I";
+    line.push_back( twp );
+    twp.tok = NUMBER;
+    twp.word = "1019";
+    line.push_back( twp );
+    twp.tok = WHITE_SPACE;
+    twp.word = " ";
+    line.push_back( twp );
+    twp.tok = NUMBER;
+    twp.word = "12";
+    line.push_back( twp );
+    twp.tok = PUNCTUATION;
+    twp.word = ":";
+    line.push_back( twp );
+    twp.tok = NUMBER;
+    twp.word = "12";
+    line.push_back( twp );
+    twp.tok = PUNCTUATION;
+    twp.word = ":";
+    line.push_back( twp );
+    twp.tok = NUMBER;
+    twp.word = "41";
+    line.push_back( twp );
+    twp.tok = PUNCTUATION;
+    twp.word = ".";
+    line.push_back( twp );
+    twp.tok = NUMBER;
+    twp.word = "428384";
+    line.push_back( twp );
+    twp.tok = WHITE_SPACE;
+    twp.word = " ";
+    line.push_back( twp );
+    twp.tok = NUMBER;
+    twp.word = "12811";
+    line.push_back( twp );
+    twp.tok = WHITE_SPACE;
+    twp.word = " ";
+    line.push_back( twp );
+    twp.tok = WORD;
+    twp.word = "siteSelectorServer";
+    line.push_back( twp );
+    twp.tok = PUNCTUATION;
+    twp.word = ".";
+    line.push_back( twp );
+    twp.tok = WORD;
+    twp.word = "cc";
+    line.push_back( twp );
+    twp.tok = PUNCTUATION;
+    twp.word = ":";
+    line.push_back( twp );
+    twp.tok = NUMBER;
+    twp.word = "109";
+    line.push_back( twp );
+    twp.tok = PUNCTUATION;
+    twp.word = "]";
+    line.push_back( twp );
+    twp.tok = WHITE_SPACE;
+    twp.word = " ";
+    line.push_back( twp );
+    twp.tok = WORD;
+    twp.word = "adding";
+    line.push_back( twp );
+    twp.tok = WORD;
+    twp.word = "connection";
+    line.push_back( twp );
+    twp.tok = PUNCTUATION;
+    twp.word = ":";
+    line.push_back( twp );
+    twp.tok = ABSTRACTED_VALUE;
+    twp.word = "0";
+    line.push_back( twp );
+
+    std::vector<TokenWordPair> *line_copy1 = new std::vector<TokenWordPair>( line );
+    std::vector<TokenWordPair> *line_copy2 = new std::vector<TokenWordPair>( line );
+
+    ParseBufferEngine pbe_in;
+    Binner binner( &pbe_in );
+
+    ParseBuffer *buffer = new ParseBuffer();
+    buffer->addLine( line_copy1 );
+    buffer->addLine( line_copy2 );
+    binner.binEntriesInBuffer( buffer );
+
+    std::unordered_map<BinKey, Bin, BinKeyHasher> &map = binner.getUnderlyingMap();
+
+    BinKey bk;
+    bk.num_words = 5;
+    bk.num_params = 1;
+    auto search = map.find( bk );
+
+    EXPECT_NE( search, map.end() );
+    std::vector<LineWithTransitions> &vec = search->second.getBinVector();
+    EXPECT_EQ( vec.size(), 1 );
+
+    LineWithTransitions &lwt = vec.at(0);
+    EXPECT_EQ( lwt.getLine(), line );
+    EXPECT_EQ( lwt.getTransitionProbability( line ), 1.0 );
+}

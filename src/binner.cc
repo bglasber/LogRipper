@@ -55,17 +55,23 @@ void LastLineForEachThread::addNewLine( uint64_t thread_id, std::vector<TokenWor
     last_lines.insert_or_assign( std::move( thread_id ), std::move( line_copy ) );
 }
 
-void Bin::insertIntoBin( std::vector<TokenWordPair> *line ) {
+void Bin::insertIntoBin( std::vector<TokenWordPair> *line, std::vector<TokenWordPair> *last_line ) {
     bool found_match = false;
-    for( LineWithTransitions line_in_bucket : unique_entries_in_bin ) {
+    for( LineWithTransitions &line_in_bucket : unique_entries_in_bin ) {
         found_match = vectorMatch( &line_in_bucket.getLine(), line );
         if( found_match ) {
+            if( last_line != nullptr ) {
+                line_in_bucket.addTransition( *last_line );
+            }
             break;
         }
     }
     if( !found_match ) {
         //Copy line in
         LineWithTransitions lwt( *line );
+        if( last_line != nullptr ) {
+            lwt.addTransition( *last_line );
+        }
         unique_entries_in_bin.emplace_back( std::move( lwt ) );
     }
 }
@@ -104,13 +110,17 @@ void Binner::binEntriesInBuffer( ParseBuffer *buffer ) {
                 tot_params++;
             }
         }
+
+        uint64_t thread_id = get_thread_id_from_parsed_line( line );
+        std::vector<TokenWordPair> *last_line = last_lines.getLastLine( thread_id );
+
         bk.num_words = tot_words;
         bk.num_params = tot_params;
+        auto found_bin_entry = bin_map.find( bk );
 
-        auto found = bin_map.find( bk );
-        if( found != bin_map.end() ) {
-            Bin &bin = found->second;
-            bin.insertIntoBin( line );
+        if( found_bin_entry != bin_map.end() ) {
+            Bin &bin = found_bin_entry->second;
+            bin.insertIntoBin( line, last_line );
         } else {
             //Moved from objects get deconstructed, so we put the line in
             //on the "moved" object.
@@ -118,7 +128,7 @@ void Binner::binEntriesInBuffer( ParseBuffer *buffer ) {
             bin_map.emplace( std::make_pair<BinKey, Bin>( std::move( bk ), std::move( bin ) ) );
             auto search = bin_map.find( bk );
             assert( search != bin_map.end() );
-            search->second.insertIntoBin( line );
+            search->second.insertIntoBin( line, last_line );
         }
         //Update last found line
         last_lines.addNewLine( get_thread_id_from_parsed_line( line ), *line );

@@ -117,7 +117,7 @@ class Bin {
 public:
     Bin() {}
     Bin( std::vector<LineWithTransitions> &unique_entries_in_bin ) : unique_entries_in_bin( unique_entries_in_bin ) {}
-    void insertIntoBin( std::vector<TokenWordPair> *line );
+    void insertIntoBin( std::vector<TokenWordPair> *line, std::vector<TokenWordPair> *last_line );
     bool vectorMatch( std::vector<TokenWordPair> *line1, std::vector<TokenWordPair> *line2 );
     std::vector<LineWithTransitions> &getBinVector() {
         return unique_entries_in_bin;
