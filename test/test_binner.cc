@@ -368,7 +368,7 @@ TEST( test_binner, test_serialize ) {
     EXPECT_STREQ( recon_line1->at(2).word.c_str(), recon_line2->at(2).word.c_str() );
 }
 
-TEST( test_transition_counter, create_counter ) {
+TEST( test_transition_counter, create_simple_counter ) {
     std::vector<TokenWordPair> line;
     TokenWordPair twp;
     twp.tok = WORD;
@@ -384,4 +384,76 @@ TEST( test_transition_counter, create_counter ) {
     EXPECT_EQ( lwt.getTransitionProbability( line ), 0.0 );
     lwt.addTransition( &line );
     EXPECT_EQ( lwt.getTransitionProbability( line ), 1.0 );
+}
+
+TEST( test_transition_counter, multiple_transitions ) {
+    std::vector<TokenWordPair> line;
+    TokenWordPair twp;
+    twp.tok = WORD;
+    twp.word = "TEST";
+    line.push_back( twp );
+    twp.tok = ABSTRACTED_VALUE;
+    line.push_back( twp );
+    twp.tok = NEW_LINE;
+    twp.word = "\n";
+    line.push_back( twp );
+
+    std::vector<TokenWordPair> line2;
+    twp.tok = WORD;
+    twp.word = "TEST";
+    line2.push_back( twp );
+    twp.tok = ABSTRACTED_VALUE;
+    twp.word = "BLAH"; //doesn't match
+    line2.push_back( twp );
+    twp.tok = NEW_LINE;
+    twp.word = "\n";
+    line2.push_back( twp );
+
+    LineWithTransitions lwt( line );
+    EXPECT_EQ( lwt.getTransitionProbability( line ), 0.0 );
+    lwt.addTransition( &line );
+    EXPECT_EQ( lwt.getTransitionProbability( line ), 1.0 );
+    lwt.addTransition( &line2 );
+    EXPECT_EQ( lwt.getTransitionProbability( line ), 0.5 );
+    EXPECT_EQ( lwt.getTransitionProbability( line2 ), 0.5 );
+}
+
+TEST( test_transition_counter, multiple_lines_and_transitions ) {
+    std::vector<TokenWordPair> line;
+    TokenWordPair twp;
+    twp.tok = WORD;
+    twp.word = "TEST";
+    line.push_back( twp );
+    twp.tok = ABSTRACTED_VALUE;
+    line.push_back( twp );
+    twp.tok = NEW_LINE;
+    twp.word = "\n";
+    line.push_back( twp );
+
+    std::vector<TokenWordPair> line2;
+    twp.tok = WORD;
+    twp.word = "TEST";
+    line2.push_back( twp );
+    twp.tok = ABSTRACTED_VALUE;
+    twp.word = "BLAH"; //doesn't match
+    line2.push_back( twp );
+    twp.tok = NEW_LINE;
+    twp.word = "\n";
+    line2.push_back( twp );
+
+    LineWithTransitions lwt( line );
+    LineWithTransitions lwt2( line2 );
+    EXPECT_EQ( lwt.getTransitionProbability( line ), 0.0 );
+    lwt.addTransition( &line );
+    EXPECT_EQ( lwt.getTransitionProbability( line ), 1.0 );
+    lwt.addTransition( &line2 );
+    EXPECT_EQ( lwt.getTransitionProbability( line ), 0.5 );
+    EXPECT_EQ( lwt.getTransitionProbability( line2 ), 0.5 );
+
+    EXPECT_EQ( lwt2.getTransitionProbability( line ), 0.0 );
+    lwt2.addTransition( &line );
+    EXPECT_EQ( lwt2.getTransitionProbability( line ), 1.0 );
+    lwt2.addTransition( &line2 );
+    EXPECT_EQ( lwt2.getTransitionProbability( line ), 0.5 );
+    EXPECT_EQ( lwt2.getTransitionProbability( line2 ), 0.5 );
 }
