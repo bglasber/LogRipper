@@ -9,6 +9,8 @@
 #include <vector>
 #include <list>
 
+bool abstracted_line_match( const std::vector<TokenWordPair> *line1, const std::vector<TokenWordPair> *line2 );
+
 struct LineKey {
     friend class boost::serialization::access;
     template <class Archive>
@@ -20,7 +22,7 @@ struct LineKey {
     LineKey( const std::vector<TokenWordPair> &line ) : line( line ) { }
 
     bool operator==( const LineKey &other ) const {
-        return line == other.line;
+        return abstracted_line_match( &line, &other.line );
     }
 };
 
@@ -97,6 +99,7 @@ struct BinKey {
         return num_words == other.num_words &&
                num_params == other.num_params;
     }
+
 };
 
 struct BinKeyHasher {
@@ -118,7 +121,8 @@ public:
     Bin() {}
     Bin( std::vector<LineWithTransitions> &unique_entries_in_bin ) : unique_entries_in_bin( unique_entries_in_bin ) {}
     void insertIntoBin( std::vector<TokenWordPair> *line, std::vector<TokenWordPair> *last_line );
-    bool vectorMatch( std::vector<TokenWordPair> *line1, std::vector<TokenWordPair> *line2 );
+    LineWithTransitions *findEntryInBin( std::vector<TokenWordPair> *line );
+
     std::vector<LineWithTransitions> &getBinVector() {
         return unique_entries_in_bin;
     }
@@ -136,6 +140,7 @@ public:
     Binner( ParseBufferEngine *pbe_in ) : pbe_in( pbe_in ), done( false ) {}
     ~Binner();
     void binEntriesInBuffer( ParseBuffer *buffer );
+    BinKey makeBinKeyForLine( std::vector<TokenWordPair> *line );
 
     void serialize( std::ofstream &os );
     void deserialize( std::ifstream &is );
