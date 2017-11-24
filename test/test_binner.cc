@@ -759,12 +759,12 @@ TEST( test_binner, multiple_transitions_and_lines_in_same_thread ) {
     EXPECT_EQ( lwt.getTransitionProbability( line ), 0.5 );
     EXPECT_EQ( lwt.getTransitionProbability( line2 ), 0.5 );
 
-    lwt = vec.at(1);
-    EXPECT_EQ( lwt.getLine(), line2 );
-    EXPECT_EQ( lwt.getTransitionProbability( line2 ), 1.0 );
+    LineWithTransitions &lwt2 = vec.at(1);
+    EXPECT_EQ( lwt2.getLine(), line2 );
+    EXPECT_EQ( lwt2.getTransitionProbability( line2 ), 1.0 );
 }
 
-TEST( test_binner, multiple_transitions_and_lines_multiple_threads ) {
+TEST( test_binner, multiple_transitions_and_lines_multiple_threads_serdes ) {
     std::vector<TokenWordPair> line;
     TokenWordPair twp;
     twp.tok = WORD;
@@ -1107,16 +1107,52 @@ TEST( test_binner, multiple_transitions_and_lines_multiple_threads ) {
     auto search = map.find( bk );
 
     EXPECT_NE( search, map.end() );
-    std::vector<LineWithTransitions> &vec = search->second.getBinVector();
-    EXPECT_EQ( vec.size(), 2 );
 
+    std::vector<LineWithTransitions> &vec = search->second.getBinVector();
+
+    EXPECT_EQ( vec.size(), 2 );
     LineWithTransitions &lwt = vec.at(0);
     EXPECT_EQ( lwt.getLine(), line );
     EXPECT_DOUBLE_EQ( lwt.getTransitionProbability( line ), (double) 2 / 3 );
     EXPECT_DOUBLE_EQ( lwt.getTransitionProbability( line2 ), (double) 1 / 3 );
 
-    lwt = vec.at(1);
-    EXPECT_EQ( lwt.getLine(), line4 );
-    EXPECT_EQ( lwt.getTransitionProbability( line ), (double) 1 / 3 );
-    EXPECT_EQ( lwt.getTransitionProbability( line2 ), (double) 2 / 3 );
+    LineWithTransitions &lwt2 = vec.at(1);
+    EXPECT_EQ( lwt2.getLine(), line4 );
+    EXPECT_EQ( lwt2.getTransitionProbability( line ), (double) 1 / 3 );
+    EXPECT_EQ( lwt2.getTransitionProbability( line2 ), (double) 2 / 3 );
+
+    //Serialize
+    std::ofstream os;
+    unlink( "test_serialize.txt" );
+    os.open( "test_serialize.txt", std::ofstream::out );
+    binner.serialize( os );
+    os.close();
+
+    //Deserialize
+    std::ifstream is;
+    is.open( "test_serialize.txt", std::ifstream::in );
+
+    Binner binner2( &pbe_in );
+    std::cout << "Going to deserialize" << std::endl;
+    binner2.deserialize( is );
+    std::cout << "Done deserializing..." << std::endl;
+
+    map = binner2.getUnderlyingMap();
+    search = map.find( bk );
+
+    EXPECT_NE( search, map.end() );
+    vec = search->second.getBinVector();
+    EXPECT_EQ( vec.size(), 2 );
+
+    LineWithTransitions &lwt3 = vec.at(0);
+    EXPECT_EQ( lwt3.getLine(), line );
+    EXPECT_DOUBLE_EQ( lwt3.getTransitionProbability( line ), (double) 2 / 3 );
+    EXPECT_DOUBLE_EQ( lwt3.getTransitionProbability( line2 ), (double) 1 / 3 );
+
+    LineWithTransitions &lwt4 = vec.at(1);
+    EXPECT_EQ( lwt4.getLine(), line4 );
+    EXPECT_EQ( lwt4.getTransitionProbability( line ), (double) 1 / 3 );
+    EXPECT_EQ( lwt4.getTransitionProbability( line2 ), (double) 2 / 3 );
+
+
 }

@@ -8,6 +8,7 @@
 #include <fstream>
 #include <vector>
 #include <list>
+#include <iostream>
 
 bool abstracted_line_match( const std::vector<TokenWordPair> *line1, const std::vector<TokenWordPair> *line2 );
 
@@ -119,7 +120,7 @@ class Bin {
     std::vector<LineWithTransitions> unique_entries_in_bin;
 public:
     Bin() {}
-    Bin( std::vector<LineWithTransitions> &unique_entries_in_bin ) : unique_entries_in_bin( unique_entries_in_bin ) {}
+    Bin( const std::vector<LineWithTransitions> &unique_entries_in_bin ) : unique_entries_in_bin( unique_entries_in_bin ) {}
     void insertIntoBin( std::vector<TokenWordPair> *line, std::vector<TokenWordPair> *last_line );
     LineWithTransitions *findEntryInBin( std::vector<TokenWordPair> *line );
 
