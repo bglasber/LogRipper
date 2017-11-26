@@ -129,6 +129,8 @@ public:
     std::vector<LineWithTransitions> &getBinVector() {
         return unique_entries_in_bin;
     }
+
+    static BinKey makeBinKeyForLine( std::vector<TokenWordPair> *line );
 };
 
 class Binner {
@@ -143,7 +145,6 @@ public:
     Binner( ParseBufferEngine *pbe_in ) : pbe_in( pbe_in ), done( false ) {}
     ~Binner();
     void binEntriesInBuffer( ParseBuffer *buffer );
-    BinKey makeBinKeyForLine( std::vector<TokenWordPair> *line );
 
     void serialize( std::ofstream &os );
     void deserialize( std::ifstream &is );

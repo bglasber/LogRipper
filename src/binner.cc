@@ -102,7 +102,7 @@ static uint64_t get_thread_id_from_parsed_line( std::vector<TokenWordPair> *line
     return atoi(line->at(11).word.c_str());
 }
 
-BinKey Binner::makeBinKeyForLine( std::vector<TokenWordPair> *line ) {
+BinKey Bin::makeBinKeyForLine( std::vector<TokenWordPair> *line ) {
     BinKey bk;
     unsigned tot_words = 0;
     unsigned tot_params = 0;
@@ -121,7 +121,7 @@ BinKey Binner::makeBinKeyForLine( std::vector<TokenWordPair> *line ) {
 void Binner::binEntriesInBuffer( ParseBuffer *buffer ) {
     for( unsigned int i = 0; i < buffer->ind; i++ ) {
         std::vector<TokenWordPair> *line = buffer->parsed_lines[i];
-        BinKey bk = makeBinKeyForLine( line );
+        BinKey bk = Bin::makeBinKeyForLine( line );
         uint64_t thread_id = get_thread_id_from_parsed_line( line );
         std::vector<TokenWordPair> *last_line = last_lines.getLastLine( thread_id );
         auto found_bin_entry = bin_map.find( bk );
@@ -141,7 +141,7 @@ void Binner::binEntriesInBuffer( ParseBuffer *buffer ) {
 
         //Find old entry, update it
         if( last_line != nullptr ) {
-            BinKey last_line_bk = makeBinKeyForLine( last_line );
+            BinKey last_line_bk = Bin::makeBinKeyForLine( last_line );
             found_bin_entry = bin_map.find( last_line_bk );
             //Can't miss on this, should already be inserted
             assert( found_bin_entry != bin_map.end() );

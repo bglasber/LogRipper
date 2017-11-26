@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <fstream>
+#include <iostream>
 
 int main() {
 
@@ -48,6 +49,17 @@ int main() {
 
     //Make a detector from the old map
     Detector detector( &pbe_rule_to_detector, std::move( bin_map ) );
+
+    //Start the pipeline...
+    detector.startProcessingBuffers();
+    rule_applier.startProcessingBuffers();
+    reader.processFile();
+    std::cout << "Done processing file." << std::endl;
+
+    rule_applier.terminateWhenDoneProcessing();
+    std::cout << "Done waiting for rule applier..." << std::endl;
+    detector.terminateWhenDoneProcessing();
+    std::cout << "Done waiting for binner..." << std::endl;
 
     close( fd );
 }
