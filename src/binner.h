@@ -51,6 +51,8 @@ public:
     LineTransitions( const std::unordered_map<LineKey, std::pair<std::vector<TokenWordPair>, uint64_t>, LineKeyHasher> &transitions ) : transitions( transitions ) {}
     void addTransition( std::vector<TokenWordPair> &other_line );
     uint64_t getTransitionCount( std::vector<TokenWordPair> &line );
+
+    std::pair<bool,double> isOutlier( std::vector<TokenWordPair> *transition_line, uint64_t total_transitions );
 };
 
 class LineWithTransitions {
@@ -70,6 +72,10 @@ public:
     LineWithTransitions( std::vector<TokenWordPair> &line, LineTransitions &lt, uint64_t &times_seen ) : line( line ), lt( lt ), times_seen( times_seen ) {}
     void addTransition( std::vector<TokenWordPair> &other_line );
     double getTransitionProbability( std::vector<TokenWordPair> &line );
+
+    std::pair<bool,double> isOutlier( std::vector<TokenWordPair> *transition_line ) {
+        return lt.isOutlier( transition_line, times_seen );
+    }
     std::vector<TokenWordPair> &getLine() {
         return line;
     }

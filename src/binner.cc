@@ -1,4 +1,5 @@
 #include "binner.h"
+#include "rules.h"
 #include <cassert>
 #include <thread>
 #include <iostream>
@@ -34,6 +35,32 @@ uint64_t LineTransitions::getTransitionCount( std::vector<TokenWordPair> &line )
     }
     return 0;
 }
+
+std::pair<bool,double> LineTransitions::isOutlier( std::vector<TokenWordPair> *transition_line, uint64_t total_transitions ) {
+        //Find entry with max count
+        uint64_t max_count = 0;
+        for( auto iter = transitions.begin(); iter != transitions.end(); iter++ ) {
+            uint64_t count = iter->second.second;
+            max_count = max_count > count ? max_count : count;
+        }
+
+        uint64_t this_line_count = getTransitionCount( *transition_line );
+        if( this_line_count == max_count ) {
+            //We're the dominant behaviour, no need to report
+            return std::make_pair( false, 0.0 );
+        }
+
+        //If the z-stat is > 0, then the dominant behaviour happens more than 90% of the time
+        double z_stat_top = (max_count / total_transitions) - 0.9;
+
+        if( z_stat_top < 0 ) {
+            return std::make_pair( false, 0.0 );
+        }
+
+        double z_stat = z_stat_top / sqrt((0.9 * (1-0.9))/total_transitions);
+        return std::make_pair( true, z_stat );
+    }
+
 
 double LineWithTransitions::getTransitionProbability( std::vector<TokenWordPair> &line ) {
     if( times_seen != 0 ) {
@@ -95,12 +122,7 @@ bool abstracted_line_match( const std::vector<TokenWordPair> *line1, const std::
     } return true;
 }
 
-static uint64_t get_thread_id_from_parsed_line( std::vector<TokenWordPair> *line ) {
-    if( line->size() < 12 ) {
-        return 0;
-    }
-    return atoi(line->at(11).word.c_str());
-}
+
 
 BinKey Bin::makeBinKeyForLine( std::vector<TokenWordPair> *line ) {
     BinKey bk;
@@ -154,7 +176,7 @@ void Binner::binEntriesInBuffer( ParseBuffer *buffer ) {
         }
 
         //Update last found line
-        last_lines.addNewLine( get_thread_id_from_parsed_line( line ), *line );
+        last_lines.addNewLine( thread_id, *line );
 
         //Destroy line
         delete line;

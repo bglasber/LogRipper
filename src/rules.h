@@ -19,4 +19,6 @@ void abstract_hostname( std::vector<TokenWordPair> *tokens_in_line );
 void abstract_millis( std::vector<TokenWordPair> *tokens_in_line );
 void abstract_bucket_line1( std::vector<TokenWordPair> *tokens_in_line );
 void abstract_client_locks_number( std::vector<TokenWordPair> *tokens_in_line );
+
+uint64_t get_thread_id_from_parsed_line( std::vector<TokenWordPair> *line );
 #endif
