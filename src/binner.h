@@ -1,3 +1,5 @@
+#ifndef __BINNER_H__
+#define __BINNER_H__
 #include "token.h"
 #include "parse_buffer.h"
 #include <boost/serialization/serialization.hpp>
@@ -152,3 +154,4 @@ public:
         return bin_map;
     }
 };
+#endif

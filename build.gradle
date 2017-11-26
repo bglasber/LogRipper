@@ -86,7 +86,7 @@ model {
         }
     }
     components {
-        logProcessor(NativeExecutableSpec) {
+        logMiner(NativeExecutableSpec) {
             sources {
                 cpp.lib library: 'glog', linkage: 'shared'
                 cpp.lib library: 'pthread', linkage: 'shared'
@@ -96,10 +96,27 @@ model {
                     source {
                         srcDir "src"
                         include "**/*.cc"
+                        exclude "**/main_same_file_detector.cc"
                     }
                 }
             }
         }
+        detector(NativeExecutableSpec) {
+            sources {
+                cpp.lib library: 'glog', linkage: 'shared'
+                cpp.lib library: 'pthread', linkage: 'shared'
+                cpp.lib library: 'boost_serialization', linkage: 'shared'
+                //cpp.lib library: 'folly', linkage: 'shared'
+                cpp {
+                    source {
+                        srcDir "src"
+                        include "**/*.cc"
+                        exclude "**/main_miner.cc"
+                    }
+                }
+            }
+        }
+
         unitTest(NativeExecutableSpec) {
             binaries.all {
                 cppCompiler.define "UNIT_TEST"
@@ -115,7 +132,7 @@ model {
                         srcDir "test"
                         srcDir "src"
                         include "**/*.cc"
-                        exclude "**/main.cc"
+                        exclude "**/main_*.cc"
                     }
                 }
             }
