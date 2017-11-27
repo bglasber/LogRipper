@@ -74,7 +74,15 @@ public:
     double getTransitionProbability( std::vector<TokenWordPair> &line );
 
     std::pair<bool,double> isOutlier( std::vector<TokenWordPair> *transition_line ) {
-        return lt.isOutlier( transition_line, times_seen );
+        std::pair<bool, double> loc = lt.isOutlier( transition_line, times_seen );
+        if( loc.first ) {
+            std::cout << "Given Prior String: " << std::endl;
+            for( const auto &twp : line ) {
+                std::cout << twp.word << " ";
+            }
+            std::cout << std::endl;
+        }
+        return loc;
     }
     std::vector<TokenWordPair> &getLine() {
         return line;

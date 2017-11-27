@@ -36,30 +36,52 @@ uint64_t LineTransitions::getTransitionCount( std::vector<TokenWordPair> &line )
     return 0;
 }
 
-std::pair<bool,double> LineTransitions::isOutlier( std::vector<TokenWordPair> *transition_line, uint64_t total_transitions ) {
-        //Find entry with max count
-        uint64_t max_count = 0;
-        for( auto iter = transitions.begin(); iter != transitions.end(); iter++ ) {
-            uint64_t count = iter->second.second;
-            max_count = max_count > count ? max_count : count;
-        }
-
-        uint64_t this_line_count = getTransitionCount( *transition_line );
-        if( this_line_count == max_count ) {
-            //We're the dominant behaviour, no need to report
-            return std::make_pair( false, 0.0 );
-        }
-
-        //If the z-stat is > 0, then the dominant behaviour happens more than 90% of the time
-        double z_stat_top = (max_count / total_transitions) - 0.9;
-
-        if( z_stat_top < 0 ) {
-            return std::make_pair( false, 0.0 );
-        }
-
-        double z_stat = z_stat_top / sqrt((0.9 * (1-0.9))/total_transitions);
-        return std::make_pair( true, z_stat );
+static void print_line( std::vector<TokenWordPair> *line ) {
+    for( const auto &twp : *line ) {
+        std::cout << twp.word << " ";
     }
+    std::cout << std::endl;
+}
+
+std::pair<bool,double> LineTransitions::isOutlier( std::vector<TokenWordPair> *transition_line, uint64_t total_transitions ) {
+    //Find entry with max count
+    uint64_t max_count = 0;
+    std::vector<TokenWordPair> *dominant_follower;
+    for( auto iter = transitions.begin(); iter != transitions.end(); iter++ ) {
+        uint64_t count = iter->second.second;
+        if( count > max_count ) {
+            max_count = count;
+            dominant_follower = &(iter->second.first);
+        }
+    }
+    //std::cout << "Got max count: " << max_count;
+    //std::cout << "Got total transitions: " << total_transitions;
+
+    uint64_t this_line_count = getTransitionCount( *transition_line );
+    if( this_line_count == max_count ) {
+        //We're the dominant behaviour, no need to report
+        return std::make_pair( false, 0.0 );
+    }
+
+    //If the z-stat is > 0, then the dominant behaviour happens more than 90% of the time
+    double z_stat_top = ((double) max_count / total_transitions) - 0.9;
+
+    if( z_stat_top < 0 ) {
+        //std::cout << "not the dominant behaviour, but got z-stat-top of: " << z_stat_top << std::endl;
+        return std::make_pair( false, 0.0 );
+    }
+
+    double z_stat = z_stat_top / sqrt((0.9 * (1-0.9))/total_transitions);
+    std::cout << "Found outlier, got z-stat of: " << z_stat << std::endl;
+    std::cout << "Count: " << this_line_count << ", Total: " << total_transitions << std::endl;
+    std::cout << "Dominant Count: " << max_count << ", Total: " << total_transitions << std::endl;
+    std::cout << "Next Line: " << std::endl;
+    print_line( transition_line );
+    std::cout << "Expected to be: " << std::endl;
+    print_line( dominant_follower );
+
+    return std::make_pair( true, z_stat );
+}
 
 
 double LineWithTransitions::getTransitionProbability( std::vector<TokenWordPair> &line ) {
