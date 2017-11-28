@@ -2,7 +2,7 @@
 #include <memory>
 #include <list>
 
-typedef void (*RuleFunction)( std::vector<TokenWordPair> *tokens_in_line );
+typedef void (*RuleFunction)( std::unique_ptr<std::vector<TokenWordPair>> &tokens_in_line );
 
 class RuleApplier {
     std::list<RuleFunction> abstraction_rules;

@@ -11,14 +11,16 @@ ParseBuffer::ParseBuffer() {
 //You don't necessarily want to destroy all the lines in the buffer, since we may have
 //put the line in the bin
 void ParseBuffer::destroyBufferLines() {
+    /*
     for( unsigned i = 0; i < ind; i++ ) {
         delete( parsed_lines[i] );
     }
+    */
 }
 
-bool ParseBuffer::addLine( std::vector<TokenWordPair> *line ) {
+bool ParseBuffer::addLine( std::unique_ptr<std::vector<TokenWordPair>> line ) {
     assert( ind < LINES_IN_BUFFER );
-    parsed_lines[ ind ] = line;
+    parsed_lines[ ind ] = std::move( line );
     ind++;
     return ind >= LINES_IN_BUFFER;
 }

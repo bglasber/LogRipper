@@ -2,7 +2,7 @@
 
 //Different word matches will entail different log entries
 //We don't want the file names in the GLOG preamble to create different events
-void anonymize_glog_preamble( std::vector<TokenWordPair> *tokens_in_line ) {
+void anonymize_glog_preamble( std::unique_ptr<std::vector<TokenWordPair>> &tokens_in_line ) {
     if( tokens_in_line->size() <= 18 ) {
         return;
     }
@@ -26,7 +26,7 @@ void anonymize_glog_preamble( std::vector<TokenWordPair> *tokens_in_line ) {
     tokens_in_line->at(17).tok = ABSTRACTED_VALUE; //C++ LINE NUMBER
 }
 
-void word_colon_number_anonymize( std::vector<TokenWordPair> *tokens_in_line ) {
+void word_colon_number_anonymize( std::unique_ptr<std::vector<TokenWordPair>> &tokens_in_line ) {
     unsigned int i = 0;
     while( i < tokens_in_line->size() - 2 ) {
         if( tokens_in_line->at(i).tok == WORD &&
@@ -39,7 +39,7 @@ void word_colon_number_anonymize( std::vector<TokenWordPair> *tokens_in_line ) {
     }
 }
 
-void word_colon_space_number_anonymize( std::vector<TokenWordPair> *tokens_in_line ) {
+void word_colon_space_number_anonymize( std::unique_ptr<std::vector<TokenWordPair>> &tokens_in_line ) {
     unsigned int i = 0;
     while( i < tokens_in_line->size() - 3 ) {
         if( tokens_in_line->at(i).tok == WORD &&
@@ -53,7 +53,7 @@ void word_colon_space_number_anonymize( std::vector<TokenWordPair> *tokens_in_li
     }
 }
 
-void anonymize_array_indexes( std::vector<TokenWordPair> *tokens_in_line ) {
+void anonymize_array_indexes( std::unique_ptr<std::vector<TokenWordPair>> &tokens_in_line ) {
     unsigned int i = 0;
     while( i < tokens_in_line->size() - 2 ) {
         if( tokens_in_line->at(i).tok == PUNCTUATION &&
@@ -67,7 +67,7 @@ void anonymize_array_indexes( std::vector<TokenWordPair> *tokens_in_line ) {
     }
 }
 
-void anonymize_equal_signs( std::vector<TokenWordPair> *tokens_in_line ) {
+void anonymize_equal_signs( std::unique_ptr<std::vector<TokenWordPair>> &tokens_in_line ) {
     unsigned int i = 0;
     while( i < tokens_in_line->size() - 2 ) {
         if( tokens_in_line->at(i+1).tok == PUNCTUATION &&
@@ -83,7 +83,7 @@ void anonymize_equal_signs( std::vector<TokenWordPair> *tokens_in_line ) {
     }
 }
 
-void anonymize_client_ids( std::vector<TokenWordPair> *tokens_in_line ) {
+void anonymize_client_ids( std::unique_ptr<std::vector<TokenWordPair>> &tokens_in_line ) {
     unsigned int i = 0;
     while( i < tokens_in_line->size() - 2 ) {
         if( tokens_in_line->at(i).tok == WORD &&
@@ -100,7 +100,7 @@ void anonymize_client_ids( std::vector<TokenWordPair> *tokens_in_line ) {
     }
 }
 
-void anonymize_location_ids( std::vector<TokenWordPair> *tokens_in_line ) {
+void anonymize_location_ids( std::unique_ptr<std::vector<TokenWordPair>> &tokens_in_line ) {
     unsigned int i = 0;
     while( i < tokens_in_line->size() - 2 ) {
         if( tokens_in_line->at(i).tok == WORD &&
@@ -116,7 +116,7 @@ void anonymize_location_ids( std::vector<TokenWordPair> *tokens_in_line ) {
     }
 }
 
-void anonymize_write_list( std::vector<TokenWordPair> *tokens_in_line ) {
+void anonymize_write_list( std::unique_ptr<std::vector<TokenWordPair>> &tokens_in_line ) {
     bool anonymized = false;
     auto iter = tokens_in_line->begin();
     while( iter != tokens_in_line->end()-3 ) {
@@ -170,7 +170,7 @@ void anonymize_write_list( std::vector<TokenWordPair> *tokens_in_line ) {
     }
 }
 
-void anonymize_decimal( std::vector<TokenWordPair> *tokens_in_line ) {
+void anonymize_decimal( std::unique_ptr<std::vector<TokenWordPair>> &tokens_in_line ) {
 
     auto iter = tokens_in_line->begin();
     while( iter != tokens_in_line->end()-2 ) {
@@ -242,7 +242,7 @@ void anonymize_decimal( std::vector<TokenWordPair> *tokens_in_line ) {
     }
 }
 
-void abstract_from_for_number( std::vector<TokenWordPair> *tokens_in_line ) {
+void abstract_from_for_number( std::unique_ptr<std::vector<TokenWordPair>> &tokens_in_line ) {
     auto iter = tokens_in_line->begin();
     while( iter != tokens_in_line->end() - 2 ) {
         auto iter_next = std::next( iter );
@@ -255,7 +255,7 @@ void abstract_from_for_number( std::vector<TokenWordPair> *tokens_in_line ) {
     }
 }
 
-void abstract_destination_site( std::vector<TokenWordPair> *tokens_in_line ) {
+void abstract_destination_site( std::unique_ptr<std::vector<TokenWordPair>> &tokens_in_line ) {
     auto iter = tokens_in_line->begin();
     while( iter != tokens_in_line->end() - 1 ) {
         auto iter_next = std::next( iter );
@@ -268,7 +268,7 @@ void abstract_destination_site( std::vector<TokenWordPair> *tokens_in_line ) {
 
 }
 
-void abstract_hostname( std::vector<TokenWordPair> *tokens_in_line ) {
+void abstract_hostname( std::unique_ptr<std::vector<TokenWordPair>> &tokens_in_line ) {
     auto iter = tokens_in_line->begin();
     while( iter != tokens_in_line->end() -1 ) {
         auto iter_next = std::next( iter );
@@ -280,7 +280,7 @@ void abstract_hostname( std::vector<TokenWordPair> *tokens_in_line ) {
     }
 }
 
-void abstract_millis( std::vector<TokenWordPair> *tokens_in_line ) {
+void abstract_millis( std::unique_ptr<std::vector<TokenWordPair>> &tokens_in_line ) {
     auto iter = tokens_in_line->begin();
     while( iter != tokens_in_line->end() - 2 ) {
         auto iter_next = std::next( iter );
@@ -295,7 +295,7 @@ void abstract_millis( std::vector<TokenWordPair> *tokens_in_line ) {
     }
 }
 
-void abstract_bucket_line1( std::vector<TokenWordPair> *tokens_in_line ) {
+void abstract_bucket_line1( std::unique_ptr<std::vector<TokenWordPair>> &tokens_in_line ) {
     auto iter = tokens_in_line->begin();
     while( iter != tokens_in_line->end()-1 ) {
         auto iter_next = std::next( iter );
@@ -371,7 +371,7 @@ void abstract_bucket_line1( std::vector<TokenWordPair> *tokens_in_line ) {
     }
 }
 
-void abstract_client_locks_number( std::vector<TokenWordPair> *tokens_in_line ) {
+void abstract_client_locks_number( std::unique_ptr<std::vector<TokenWordPair>> &tokens_in_line ) {
     auto iter = tokens_in_line->begin();
     while( iter != tokens_in_line->end()-1 ) {
         if( iter->tok == WORD && iter->word == "locks" ) {
@@ -388,7 +388,7 @@ void abstract_client_locks_number( std::vector<TokenWordPair> *tokens_in_line ) 
     }
 }
 
-uint64_t get_thread_id_from_parsed_line( std::vector<TokenWordPair> *line ) {
+uint64_t get_thread_id_from_parsed_line( std::shared_ptr<std::vector<TokenWordPair>> &line ) {
     if( line->size() < 12 ) {
         return 0;
     }

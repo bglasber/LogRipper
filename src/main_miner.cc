@@ -58,7 +58,7 @@ int main() {
         std::vector<LineWithTransitions> &vec = it->second.getBinVector();
         std::cout << "Bucket Entries: " << std::endl;
         for( auto it2 = vec.begin(); it2 != vec.end(); it2++ ) {
-            std::vector<TokenWordPair> &l = it2->getLine();
+            std::vector<TokenWordPair> &l = *(it2->getLine());
             for( auto it3 = l.begin(); it3 != l.end(); it3++ ) {
                 std::cout << it3->word << " ";
             }

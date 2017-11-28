@@ -8,11 +8,11 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 
-void LineTransitions::addTransition( std::vector<TokenWordPair> &other_line ) {
+void LineTransitions::addTransition( std::shared_ptr<std::vector<TokenWordPair>> other_line ) {
     LineKey lk( other_line );
     auto search = transitions.find( lk );
     if( search != transitions.end() ) {
-        std::pair<std::vector<TokenWordPair>, uint64_t> &entry = search->second;
+        std::pair<std::shared_ptr<std::vector<TokenWordPair>>, uint64_t> &entry = search->second;
         entry.second++;
     } else {
         auto inner_pair = std::make_pair( other_line, 1 );
@@ -21,43 +21,38 @@ void LineTransitions::addTransition( std::vector<TokenWordPair> &other_line ) {
     }
 }
 
-void LineWithTransitions::addTransition( std::vector<TokenWordPair> &other_line ) {
-    times_seen++;
-    return lt.addTransition( other_line );
-}
-
-uint64_t LineTransitions::getTransitionCount( std::vector<TokenWordPair> &line ) {
+uint64_t LineTransitions::getTransitionCount( std::shared_ptr<std::vector<TokenWordPair>> &line ) {
     LineKey lk( line );
     auto search = transitions.find( lk );
     if( search != transitions.end() ) {
-        std::pair<std::vector<TokenWordPair>, uint64_t> &entry = search->second;
+        std::pair<std::shared_ptr<std::vector<TokenWordPair>>, uint64_t> &entry = search->second;
         return entry.second;
     }
     return 0;
 }
 
-static void print_line( std::vector<TokenWordPair> *line ) {
+static void print_line( std::shared_ptr<std::vector<TokenWordPair>> &line ) {
     for( const auto &twp : *line ) {
         std::cout << twp.word << " ";
     }
     std::cout << std::endl;
 }
 
-std::pair<bool,double> LineTransitions::isOutlier( std::vector<TokenWordPair> *transition_line, uint64_t total_transitions ) {
+std::pair<bool,double> LineTransitions::isOutlier( std::shared_ptr<std::vector<TokenWordPair>> &transition_line, uint64_t total_transitions ) {
     //Find entry with max count
     uint64_t max_count = 0;
-    std::vector<TokenWordPair> *dominant_follower;
+    std::shared_ptr<std::vector<TokenWordPair>> dominant_follower;
     for( auto iter = transitions.begin(); iter != transitions.end(); iter++ ) {
         uint64_t count = iter->second.second;
         if( count > max_count ) {
             max_count = count;
-            dominant_follower = &(iter->second.first);
+            dominant_follower = iter->second.first;
         }
     }
     //std::cout << "Got max count: " << max_count;
     //std::cout << "Got total transitions: " << total_transitions;
 
-    uint64_t this_line_count = getTransitionCount( *transition_line );
+    uint64_t this_line_count = getTransitionCount( transition_line );
     if( this_line_count == max_count ) {
         //We're the dominant behaviour, no need to report
         return std::make_pair( false, 0.0 );
@@ -83,54 +78,57 @@ std::pair<bool,double> LineTransitions::isOutlier( std::vector<TokenWordPair> *t
     return std::make_pair( true, z_stat );
 }
 
+void LineWithTransitions::addTransition( std::shared_ptr<std::vector<TokenWordPair>> other_line ) {
+    times_seen++;
+    return lt.addTransition( other_line );
+}
 
-double LineWithTransitions::getTransitionProbability( std::vector<TokenWordPair> &line ) {
+double LineWithTransitions::getTransitionProbability( std::shared_ptr<std::vector<TokenWordPair>> &line ) {
     if( times_seen != 0 ) {
         return (double) lt.getTransitionCount( line ) / times_seen;
     }
     return 0;
 }
 
-std::vector<TokenWordPair> *LastLineForEachThread::getLastLine( uint64_t thread_id ) {
+std::shared_ptr<std::vector<TokenWordPair>> LastLineForEachThread::getLastLine( uint64_t thread_id ) {
     auto search = last_lines.find( thread_id );
     if( search != last_lines.end() ) {
-        return &(search->second);
+        return search->second;
     }
     return nullptr;
 }
 
-void LastLineForEachThread::addNewLine( uint64_t thread_id, std::vector<TokenWordPair> &line ) {
-    std::vector<TokenWordPair> line_copy( line );
-    last_lines.insert_or_assign( std::move( thread_id ), std::move( line_copy ) );
+void LastLineForEachThread::addNewLine( uint64_t thread_id, std::shared_ptr<std::vector<TokenWordPair>> line ) {
+    last_lines.insert_or_assign( std::move( thread_id ), line );
 }
 
-void Bin::insertIntoBin( std::vector<TokenWordPair> *line, std::vector<TokenWordPair> *last_line ) {
+void Bin::insertIntoBin( std::shared_ptr<std::vector<TokenWordPair>> line, std::shared_ptr<std::vector<TokenWordPair>> &last_line ) {
     bool found_match = false;
 
     //Build the transition structure if it doesn't exist
     for( LineWithTransitions &line_in_bucket : unique_entries_in_bin ) {
-        found_match = abstracted_line_match( &line_in_bucket.getLine(), line );
+        found_match = abstracted_line_match( line_in_bucket.getLine(), line );
         if( found_match ) {
             break;
         }
     }
     if( !found_match ) {
         //Copy line in
-        LineWithTransitions lwt( *line );
+        LineWithTransitions lwt( std::move( line ) );
         unique_entries_in_bin.emplace_back( std::move( lwt ) );
     }
 }
 
-LineWithTransitions *Bin::findEntryInBin( std::vector<TokenWordPair> *line ) {
+LineWithTransitions *Bin::findEntryInBin( std::shared_ptr<std::vector<TokenWordPair>> &line ) {
     for( LineWithTransitions &line_in_bucket : unique_entries_in_bin ) {
-        if( abstracted_line_match( &line_in_bucket.getLine(), line ) ) {
+        if( abstracted_line_match( line_in_bucket.getLine(), line ) ) {
             return &line_in_bucket;
         }
     }
     return nullptr;
 }
 
-bool abstracted_line_match( const std::vector<TokenWordPair> *line1, const std::vector<TokenWordPair> *line2 ) {
+bool abstracted_line_match( const std::shared_ptr<std::vector<TokenWordPair>> &line1, const std::shared_ptr<std::vector<TokenWordPair>> &line2 ) {
     if( line1->size() != line2->size() ) {
         //Hash collision?
         return false;
@@ -144,16 +142,14 @@ bool abstracted_line_match( const std::vector<TokenWordPair> *line1, const std::
     } return true;
 }
 
-
-
-BinKey Bin::makeBinKeyForLine( std::vector<TokenWordPair> *line ) {
+BinKey Bin::makeBinKeyForLine( std::vector<TokenWordPair> &line ) {
     BinKey bk;
     unsigned tot_words = 0;
     unsigned tot_params = 0;
-    for( unsigned int line_ind = 0; line_ind < line->size(); line_ind++ ) {
-        if( line->at(line_ind).tok == WORD ) {
+    for( unsigned int line_ind = 0; line_ind < line.size(); line_ind++ ) {
+        if( line.at(line_ind).tok == WORD ) {
             tot_words++;
-        } else if( line->at(line_ind).tok == ABSTRACTED_VALUE ) {
+        } else if( line.at(line_ind).tok == ABSTRACTED_VALUE ) {
             tot_params++;
         }
     }
@@ -162,17 +158,35 @@ BinKey Bin::makeBinKeyForLine( std::vector<TokenWordPair> *line ) {
     return bk;
 }
 
+BinKey Bin::makeBinKeyForLine( std::unique_ptr<std::vector<TokenWordPair>> &line ) {
+    return makeBinKeyForLine( *line );
+}
+
+BinKey Bin::makeBinKeyForLine( std::shared_ptr<std::vector<TokenWordPair>> &line ) {
+    return makeBinKeyForLine( *line );
+}
+
 void Binner::binEntriesInBuffer( std::unique_ptr<ParseBuffer> buffer ) {
     for( unsigned int i = 0; i < buffer->ind; i++ ) {
-        std::vector<TokenWordPair> *line = buffer->parsed_lines[i];
-        BinKey bk = Bin::makeBinKeyForLine( line );
-        uint64_t thread_id = get_thread_id_from_parsed_line( line );
-        std::vector<TokenWordPair> *last_line = last_lines.getLastLine( thread_id );
+        std::unique_ptr<std::vector<TokenWordPair>> line = std::move( buffer->parsed_lines[i] );
+
+        //At this point, we need to put this line into the last_line position and into the
+        //bin (if unique)
+        //If unique, then last_line gets destroyed first
+        //Else immediately destroyed then last_line needs to live for a bit
+        //Easiest to solve this problem with a shared_ptr
+
+        std::shared_ptr<std::vector<TokenWordPair>> shared_line_ptr( std::move( line ) );
+
+        uint64_t thread_id = get_thread_id_from_parsed_line( shared_line_ptr );
+        BinKey bk = Bin::makeBinKeyForLine( shared_line_ptr );
+
+        std::shared_ptr<std::vector<TokenWordPair>> last_line = last_lines.getLastLine( thread_id );
         auto found_bin_entry = bin_map.find( bk );
 
         if( found_bin_entry != bin_map.end() ) {
             Bin &bin = found_bin_entry->second;
-            bin.insertIntoBin( line, last_line );
+            bin.insertIntoBin( shared_line_ptr, last_line );
         } else {
             //Moved from objects get deconstructed, so we put the line in
             //on the "moved" object.
@@ -180,7 +194,7 @@ void Binner::binEntriesInBuffer( std::unique_ptr<ParseBuffer> buffer ) {
             bin_map.emplace( std::make_pair<BinKey, Bin>( std::move( bk ), std::move( bin ) ) );
             auto search = bin_map.find( bk );
             assert( search != bin_map.end() );
-            search->second.insertIntoBin( line, last_line );
+            search->second.insertIntoBin( shared_line_ptr, last_line );
         }
 
         //Find old entry, update it
@@ -194,14 +208,11 @@ void Binner::binEntriesInBuffer( std::unique_ptr<ParseBuffer> buffer ) {
             //its probably faster than a second hashtable
             LineWithTransitions *lwt = bin.findEntryInBin( last_line );
             assert( lwt != nullptr );
-            lwt->addTransition( *line );
+            lwt->addTransition( shared_line_ptr );
         }
 
         //Update last found line
-        last_lines.addNewLine( thread_id, *line );
-
-        //Destroy line
-        delete line;
+        last_lines.addNewLine( thread_id, shared_line_ptr );
     }
 }
 

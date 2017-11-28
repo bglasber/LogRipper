@@ -3,6 +3,7 @@
 #include "token.h"
 #include "parse_buffer.h"
 #include <boost/serialization/serialization.hpp>
+#include <boost/serialization/shared_ptr.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/functional/hash.hpp>
 #include <cstdint>
@@ -13,7 +14,7 @@
 #include <iostream>
 #include <memory>
 
-bool abstracted_line_match( const std::vector<TokenWordPair> *line1, const std::vector<TokenWordPair> *line2 );
+bool abstracted_line_match( const std::shared_ptr<std::vector<TokenWordPair>> &line1, const std::shared_ptr<std::vector<TokenWordPair>> &line2 );
 
 struct LineKey {
     friend class boost::serialization::access;
@@ -21,19 +22,19 @@ struct LineKey {
         void serialize( Archive &ar, const unsigned int version ) {
             ar & line;
         }
-    std::vector<TokenWordPair> line;
+    std::shared_ptr<std::vector<TokenWordPair>> line;
     LineKey() {}
-    LineKey( const std::vector<TokenWordPair> &line ) : line( line ) { }
+    LineKey( std::shared_ptr<std::vector<TokenWordPair>> line ) : line( line ) { }
 
     bool operator==( const LineKey &other ) const {
-        return abstracted_line_match( &line, &other.line );
+        return abstracted_line_match( line, other.line );
     }
 };
 
 struct LineKeyHasher {
     std::size_t operator()( const LineKey &lk ) const {
         std::size_t seed = 0;
-        for( const auto &twp : lk.line ) {
+        for( const auto &twp : *(lk.line) ) {
             boost::hash_combine( seed, twp.tok );
         }
         return seed;
@@ -46,14 +47,14 @@ class LineTransitions {
         void serialize( Archive &ar, const unsigned int version ) {
             ar & transitions;
         }
-    std::unordered_map<LineKey, std::pair<std::vector<TokenWordPair>, uint64_t>, LineKeyHasher> transitions;
+    std::unordered_map<LineKey, std::pair<std::shared_ptr<std::vector<TokenWordPair>>, uint64_t>, LineKeyHasher> transitions;
 public:
     LineTransitions() {}
-    LineTransitions( const std::unordered_map<LineKey, std::pair<std::vector<TokenWordPair>, uint64_t>, LineKeyHasher> &transitions ) : transitions( transitions ) {}
-    void addTransition( std::vector<TokenWordPair> &other_line );
-    uint64_t getTransitionCount( std::vector<TokenWordPair> &line );
+    LineTransitions( const std::unordered_map<LineKey, std::pair<std::shared_ptr<std::vector<TokenWordPair>>, uint64_t>, LineKeyHasher> &transitions ) : transitions( transitions ) {}
+    void addTransition( std::shared_ptr<std::vector<TokenWordPair>> other_line );
+    uint64_t getTransitionCount( std::shared_ptr<std::vector<TokenWordPair>> &line );
 
-    std::pair<bool,double> isOutlier( std::vector<TokenWordPair> *transition_line, uint64_t total_transitions );
+    std::pair<bool,double> isOutlier( std::shared_ptr<std::vector<TokenWordPair>> &transition_line, uint64_t total_transitions );
 };
 
 class LineWithTransitions {
@@ -64,38 +65,38 @@ class LineWithTransitions {
             ar & lt;
             ar & times_seen;
         }
-    std::vector<TokenWordPair>  line;
+    std::shared_ptr<std::vector<TokenWordPair>>  line;
     LineTransitions             lt;
     uint64_t                    times_seen;
 public:
     LineWithTransitions(): times_seen( 0 ) { }
-    LineWithTransitions( std::vector<TokenWordPair> &line ) : line( line ), times_seen( 0 ) {}
-    LineWithTransitions( std::vector<TokenWordPair> &line, LineTransitions &lt, uint64_t &times_seen ) : line( line ), lt( lt ), times_seen( times_seen ) {}
-    void addTransition( std::vector<TokenWordPair> &other_line );
-    double getTransitionProbability( std::vector<TokenWordPair> &line );
+    LineWithTransitions( std::shared_ptr<std::vector<TokenWordPair>> line ) : line( line ), times_seen( 0 ) {}
+    LineWithTransitions( std::shared_ptr<std::vector<TokenWordPair>> line, LineTransitions &lt, uint64_t &times_seen ) : line( line ), lt( lt ), times_seen( times_seen ) {}
+    void addTransition( std::shared_ptr<std::vector<TokenWordPair>> other_line );
+    double getTransitionProbability( std::shared_ptr<std::vector<TokenWordPair>> &line );
 
-    std::pair<bool,double> isOutlier( std::vector<TokenWordPair> *transition_line ) {
+    std::pair<bool,double> isOutlier( std::shared_ptr<std::vector<TokenWordPair>> &transition_line ) {
         std::pair<bool, double> loc = lt.isOutlier( transition_line, times_seen );
         if( loc.first ) {
             std::cout << "Given Prior String: " << std::endl;
-            for( const auto &twp : line ) {
+            for( const auto &twp : *line ) {
                 std::cout << twp.word << " ";
             }
             std::cout << std::endl;
         }
         return loc;
     }
-    std::vector<TokenWordPair> &getLine() {
+    std::shared_ptr<std::vector<TokenWordPair>> &getLine() {
         return line;
     }
 };
 
 class LastLineForEachThread {
-    std::unordered_map<uint64_t, std::vector<TokenWordPair>> last_lines;
+    std::unordered_map<uint64_t, std::shared_ptr<std::vector<TokenWordPair>>> last_lines;
 public:
     LastLineForEachThread() {}
-    std::vector<TokenWordPair> *getLastLine( uint64_t thread_id );
-    void addNewLine( uint64_t thread_id, std::vector<TokenWordPair> &line );
+    std::shared_ptr<std::vector<TokenWordPair>> getLastLine( uint64_t thread_id );
+    void addNewLine( uint64_t thread_id, std::shared_ptr<std::vector<TokenWordPair>> line );
 };
 
 struct BinKey {
@@ -135,17 +136,20 @@ class Bin {
             ar & unique_entries_in_bin;
         }
     std::vector<LineWithTransitions> unique_entries_in_bin;
+
+    static BinKey makeBinKeyForLine( std::vector<TokenWordPair> &line );
 public:
     Bin() {}
     Bin( const std::vector<LineWithTransitions> &unique_entries_in_bin ) : unique_entries_in_bin( unique_entries_in_bin ) {}
-    void insertIntoBin( std::vector<TokenWordPair> *line, std::vector<TokenWordPair> *last_line );
-    LineWithTransitions *findEntryInBin( std::vector<TokenWordPair> *line );
+    void insertIntoBin( std::shared_ptr<std::vector<TokenWordPair>> line, std::shared_ptr<std::vector<TokenWordPair>> &last_line );
+    LineWithTransitions *findEntryInBin( std::shared_ptr<std::vector<TokenWordPair>> &line );
 
     std::vector<LineWithTransitions> &getBinVector() {
         return unique_entries_in_bin;
     }
 
-    static BinKey makeBinKeyForLine( std::vector<TokenWordPair> *line );
+    static BinKey makeBinKeyForLine( std::unique_ptr<std::vector<TokenWordPair>> &line );
+    static BinKey makeBinKeyForLine( std::shared_ptr<std::vector<TokenWordPair>> &line );
 };
 
 class Binner {

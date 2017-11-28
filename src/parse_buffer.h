@@ -12,10 +12,10 @@
 //Used to pass "units of work" between the components
 struct ParseBuffer {
     unsigned ind;
-    std::vector<TokenWordPair> *parsed_lines[ LINES_IN_BUFFER ];
+    std::unique_ptr<std::vector<TokenWordPair>> parsed_lines[ LINES_IN_BUFFER ];
     ParseBuffer();
     void destroyBufferLines();
-    bool addLine( std::vector<TokenWordPair> *line );
+    bool addLine( std::unique_ptr<std::vector<TokenWordPair>> line );
 };
 
 
