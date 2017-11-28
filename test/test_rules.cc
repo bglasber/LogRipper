@@ -41,7 +41,7 @@ TEST( test_rules, single_entry_pass_through ) {
     rule_funcs.push_back( pass_through_rule );
     RuleApplier ra( std::move( rule_funcs ), &pbe_in, &pbe_out );
 
-    ParseBuffer *buffer = new ParseBuffer();
+    std::unique_ptr<ParseBuffer> buffer = std::make_unique<ParseBuffer>();
 
     std::vector<TokenWordPair> *tokens_in_line = new std::vector<TokenWordPair>();
     (void) tokens_in_line;
@@ -69,7 +69,6 @@ TEST( test_rules, single_entry_pass_through ) {
     EXPECT_EQ( tokens_in_line->at(1).tok, NEW_LINE );
 
     buffer->destroyBufferLines();
-    delete buffer;
 }
 
 TEST( test_rules, single_entry_abstract_all ) {
@@ -79,7 +78,7 @@ TEST( test_rules, single_entry_abstract_all ) {
     rule_funcs.push_back( abstract_all_rule );
     RuleApplier ra( std::move( rule_funcs ), &pbe_in, &pbe_out );
 
-    ParseBuffer *buffer = new ParseBuffer();
+    std::unique_ptr<ParseBuffer> buffer = std::make_unique<ParseBuffer>();
 
     std::vector<TokenWordPair> *tokens_in_line = new std::vector<TokenWordPair>();
     (void) tokens_in_line;
@@ -109,7 +108,6 @@ TEST( test_rules, single_entry_abstract_all ) {
     EXPECT_STREQ( tokens_in_line->at(1).word.c_str(), "\n" );
 
     buffer->destroyBufferLines();
-    delete buffer;
 }
 
 TEST( test_rules, apply_rule_across_whole_buffer ) {
@@ -119,7 +117,7 @@ TEST( test_rules, apply_rule_across_whole_buffer ) {
     rule_funcs.push_back( abstract_all_rule );
     RuleApplier ra( std::move( rule_funcs ), &pbe_in, &pbe_out );
 
-    ParseBuffer *buffer = new ParseBuffer();
+    std::unique_ptr<ParseBuffer> buffer = std::make_unique<ParseBuffer>();
 
     bool done = false;
     while( !done ) {
@@ -150,7 +148,6 @@ TEST( test_rules, apply_rule_across_whole_buffer ) {
 
 
     buffer->destroyBufferLines();
-    delete buffer;
 }
 
 TEST( test_rules, apply_multiple_rules_across_whole_buffer ) {
@@ -161,7 +158,7 @@ TEST( test_rules, apply_multiple_rules_across_whole_buffer ) {
     rule_funcs.push_back( abstract_all_number );
     RuleApplier ra( std::move( rule_funcs ), &pbe_in, &pbe_out );
 
-    ParseBuffer *buffer = new ParseBuffer();
+    std::unique_ptr<ParseBuffer> buffer = std::make_unique<ParseBuffer>();
 
     bool done = false;
     while( !done ) {
@@ -211,5 +208,4 @@ TEST( test_rules, apply_multiple_rules_across_whole_buffer ) {
     }
 
     buffer->destroyBufferLines();
-    delete buffer;
 }

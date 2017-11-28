@@ -162,7 +162,7 @@ BinKey Bin::makeBinKeyForLine( std::vector<TokenWordPair> *line ) {
     return bk;
 }
 
-void Binner::binEntriesInBuffer( ParseBuffer *buffer ) {
+void Binner::binEntriesInBuffer( std::unique_ptr<ParseBuffer> buffer ) {
     for( unsigned int i = 0; i < buffer->ind; i++ ) {
         std::vector<TokenWordPair> *line = buffer->parsed_lines[i];
         BinKey bk = Bin::makeBinKeyForLine( line );
@@ -203,7 +203,6 @@ void Binner::binEntriesInBuffer( ParseBuffer *buffer ) {
         //Destroy line
         delete line;
     }
-    delete buffer;
 }
 
 void Binner::serialize( std::ofstream &os ) {
@@ -221,13 +220,13 @@ Binner::~Binner() {
 
 void Binner::processLoop() {
     for( ;; ) {
-        ParseBuffer *buffer = pbe_in->getNextBuffer();
+        std::unique_ptr<ParseBuffer> buffer = std::move( pbe_in->getNextBuffer() );
         if( !buffer ) {
             done = true;
             std::cout << "Binner got null buffer, terminating..." << std::endl;
             return;
         }
-        binEntriesInBuffer( buffer );
+        binEntriesInBuffer( std::move( buffer ) );
     }
 }
 

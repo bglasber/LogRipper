@@ -277,7 +277,7 @@ void FileReader::processFile( ) {
     Token last_state = START;
     Token next_token;
     std::string token_buff;
-    ParseBuffer *buffer = new ParseBuffer();
+    std::unique_ptr<ParseBuffer> buffer = std::make_unique<ParseBuffer>();
     std::vector<TokenWordPair> *tokens_in_line = new std::vector<TokenWordPair>();
     for( ;; ) {
         if( buff_idx >= fs_blksize ) {
@@ -300,7 +300,7 @@ void FileReader::processFile( ) {
                     buffer->addLine( tokens_in_line );
                     //No need to get a new buff, because we are done parsing
                     //Just signal this buffer as ready
-                    parse_buffer_engine->putNextBuffer( buffer );
+                    parse_buffer_engine->putNextBuffer( std::move( buffer ) );
 #if !defined( NDEBUG )
                     buffer = NULL;
                     tokens_in_line = NULL;
@@ -324,7 +324,7 @@ void FileReader::processFile( ) {
                         buffer->addLine( tokens_in_line );
                         //No need to get a new buff, because we are done parsing
                         //Just signal this buffer as ready
-                        parse_buffer_engine->putNextBuffer( buffer );
+                        parse_buffer_engine->putNextBuffer( std::move( buffer ) );
 #if !defined( NDEBUG )
                         buffer = NULL;
                         tokens_in_line = NULL;
@@ -357,7 +357,7 @@ void FileReader::processFile( ) {
                     buffer->addLine( tokens_in_line );
                     //No need to get a new buff, because we are done parsing
                     //Just signal this buffer as ready
-                    parse_buffer_engine->putNextBuffer( buffer );
+                    parse_buffer_engine->putNextBuffer( std::move( buffer ) );
 #if !defined( NDEBUG )
                     buffer = NULL;
                     tokens_in_line = NULL;
@@ -384,7 +384,7 @@ void FileReader::processFile( ) {
                         buffer->addLine( tokens_in_line );
                         //No need to get a new buff, because we are done parsing
                         //Just signal this buffer as ready
-                        parse_buffer_engine->putNextBuffer( buffer );
+                        parse_buffer_engine->putNextBuffer( std::move( buffer ) );
 #if !defined( NDEBUG )
                         buffer = NULL;
                         tokens_in_line = NULL;
@@ -418,7 +418,7 @@ PARSER_MAIN:
             buffer->addLine( tokens_in_line );
             //No need to get a new buff, because we are done parsing
             //Just signal this buffer as ready
-            parse_buffer_engine->putNextBuffer( buffer );
+            parse_buffer_engine->putNextBuffer( std::move( buffer ) );
 #if !defined( NDEBUG )
             buffer = NULL;
             tokens_in_line = NULL;
@@ -460,7 +460,7 @@ PARSER_MAIN:
                 bool buff_done = buffer->addLine( tokens_in_line );
                 //Buffer full, make a new one
                 if( buff_done ) {
-                    parse_buffer_engine->putNextBuffer( buffer );
+                    parse_buffer_engine->putNextBuffer( std::move( buffer ) );
                     struct sysinfo info;
 RECHECK_MEM_AVAIL:
                     int rc = sysinfo( &info );
@@ -471,7 +471,7 @@ RECHECK_MEM_AVAIL:
                         std::cout << "FR: waiting for memory to be available..." << std::endl;
                         goto RECHECK_MEM_AVAIL;
                     }
-                    buffer = new ParseBuffer();
+                    buffer = std::make_unique<ParseBuffer>();
                 }
                 tokens_in_line = new std::vector<TokenWordPair>();
 

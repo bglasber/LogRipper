@@ -3,7 +3,7 @@
 #include <thread>
 #include <iostream>
 
-void RuleApplier::applyRules( ParseBuffer *buff ) {
+void RuleApplier::applyRules( std::unique_ptr<ParseBuffer> &buff ) {
     for( unsigned int i = 0; i < buff->ind; i++ ) {
         std::vector<TokenWordPair> *tokens_in_line = buff->parsed_lines[i];
         for( RuleFunction rf : abstraction_rules ) {
@@ -19,7 +19,7 @@ void RuleApplier::startProcessingBuffers() {
 
 void RuleApplier::processLoop() {
     for( ;; ) {
-        ParseBuffer *buffer = pbe_in->getNextBuffer();
+        std::unique_ptr<ParseBuffer> buffer = std::move( pbe_in->getNextBuffer() );
         if( !buffer ) {
             done = true;
             std::cout << "Rule Applier got null buffer, terminating..." << std::endl;
@@ -28,7 +28,7 @@ void RuleApplier::processLoop() {
         //std::cout << "RAH got another buffer..." << std::endl;
         applyRules( buffer );
 
-        pbe_out->putNextBuffer( buffer );
+        pbe_out->putNextBuffer( std::move( buffer ) );
     }
 }
 

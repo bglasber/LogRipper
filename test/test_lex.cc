@@ -58,11 +58,11 @@ TEST( test_lex, test_process_line ) {
     reader.processFile();
 
     //Check what we read
-    const std::list<ParseBuffer *> &parsed_buffs = pbe.getReadyBuffers();
+    const std::list<std::unique_ptr<ParseBuffer>> &parsed_buffs = pbe.getReadyBuffers();
     //One unit of work was processed
     EXPECT_EQ( parsed_buffs.size(), 1 );
     //First buff, first line
-    ParseBuffer *buff = parsed_buffs.front();
+    const std::unique_ptr<ParseBuffer> &buff = parsed_buffs.front();
     std::vector<TokenWordPair> &line = *(buff->parsed_lines[0]);
     int line_ind = 0;
 
@@ -184,13 +184,13 @@ TEST( test_lex, one_full_buffer ) {
     reader.processFile();
 
     //Check what we read
-    const std::list<ParseBuffer *> &parsed_buffs = pbe.getReadyBuffers();
+    const std::list<std::unique_ptr<ParseBuffer>> &parsed_buffs = pbe.getReadyBuffers();
     unsigned tot_lines = 0;
-    for( ParseBuffer *buff : parsed_buffs ) {
+    for( const std::unique_ptr<ParseBuffer> &buff : parsed_buffs ) {
         tot_lines += buff->ind;
     }
     EXPECT_EQ( tot_lines, num_messages_to_write );
-    for( ParseBuffer *buff : parsed_buffs ) {
+    for( const std::unique_ptr<ParseBuffer> &buff : parsed_buffs ) {
         for( unsigned i = 0; i < buff->ind; i++ ) {
             std::vector<TokenWordPair> &line = *(buff->parsed_lines[i]);
             EXPECT_EQ( line[0].tok, WORD );
@@ -235,13 +235,13 @@ TEST( test_lex, both_buffers_full ) {
     reader.processFile();
 
     //Check what we read
-    const std::list<ParseBuffer *> &parsed_buffs = pbe.getReadyBuffers();
+    const std::list<std::unique_ptr<ParseBuffer>> &parsed_buffs = pbe.getReadyBuffers();
     unsigned tot_lines = 0;
-    for( ParseBuffer *buff : parsed_buffs ) {
+    for( const std::unique_ptr<ParseBuffer> &buff : parsed_buffs ) {
         tot_lines += buff->ind;
     }
     EXPECT_EQ( tot_lines, num_messages_to_write );
-    for( ParseBuffer *buff : parsed_buffs ) {
+    for( const std::unique_ptr<ParseBuffer> &buff : parsed_buffs ) {
         for( unsigned i = 0; i < buff->ind; i++ ) {
             std::vector<TokenWordPair> &line = *(buff->parsed_lines[i]);
             EXPECT_EQ( line[0].tok, WORD );
@@ -285,13 +285,13 @@ TEST( test_lex, async_reload_buffer ) {
     reader.processFile();
 
     //Check what we read
-    const std::list<ParseBuffer *> &parsed_buffs = pbe.getReadyBuffers();
+    const std::list<std::unique_ptr<ParseBuffer>> &parsed_buffs = pbe.getReadyBuffers();
     unsigned tot_lines = 0;
-    for( ParseBuffer *buff : parsed_buffs ) {
+    for( const std::unique_ptr<ParseBuffer> &buff : parsed_buffs ) {
         tot_lines += buff->ind;
     }
     EXPECT_EQ( tot_lines, num_messages_to_write );
-    for( ParseBuffer *buff : parsed_buffs ) {
+    for( const std::unique_ptr<ParseBuffer> &buff : parsed_buffs ) {
         for( unsigned i = 0; i < buff->ind; i++ ) {
             std::vector<TokenWordPair> &line = *(buff->parsed_lines[i]);
             EXPECT_EQ( line[0].tok, WORD );
@@ -349,14 +349,14 @@ TEST( test_lex, async_reload_alternating_buffer ) {
     reader.processFile();
 
     //Check what we read
-    const std::list<ParseBuffer *> &parsed_buffs = pbe.getReadyBuffers();
+    const std::list<std::unique_ptr<ParseBuffer>> &parsed_buffs = pbe.getReadyBuffers();
     unsigned tot_lines = 0;
-    for( ParseBuffer *buff : parsed_buffs ) {
+    for( const std::unique_ptr<ParseBuffer> &buff : parsed_buffs ) {
         tot_lines += buff->ind;
     }
     EXPECT_EQ( tot_lines, num_messages_to_write*4 );
     unsigned cur_ind = 0;
-    for( ParseBuffer *buff : parsed_buffs ) {
+    for( const std::unique_ptr<ParseBuffer> &buff : parsed_buffs ) {
         for( unsigned i = 0; i < buff->ind; i++ ) {
             std::vector<TokenWordPair> &line = *(buff->parsed_lines[i]);
             if( cur_ind < num_messages_to_write ) {
@@ -411,13 +411,13 @@ TEST( test_lex, cross_buffer_boundary ) {
     reader.processFile();
 
     //Check what we read
-    const std::list<ParseBuffer *> &parsed_buffs = pbe.getReadyBuffers();
+    const std::list<std::unique_ptr<ParseBuffer>> &parsed_buffs = pbe.getReadyBuffers();
     unsigned tot_lines = 0;
-    for( ParseBuffer *buff : parsed_buffs ) {
+    for( const std::unique_ptr<ParseBuffer> &buff : parsed_buffs ) {
         tot_lines += buff->ind;
     }
     EXPECT_EQ( tot_lines, times_msg_fits_in_buffer+1 );
-    for( ParseBuffer *buff : parsed_buffs ) {
+    for( const std::unique_ptr<ParseBuffer> &buff : parsed_buffs ) {
         for( unsigned i = 0; i < buff->ind; i++ ) {
             std::vector<TokenWordPair> &line = *(buff->parsed_lines[i]);
             int line_ind = 0;
@@ -537,14 +537,14 @@ TEST( test_lex, double_cross_buffer_boundary ) {
     reader.processFile();
 
     //Check what we read
-    const std::list<ParseBuffer *> &parsed_buffs = pbe.getReadyBuffers();
+    const std::list<std::unique_ptr<ParseBuffer>> &parsed_buffs = pbe.getReadyBuffers();
     unsigned tot_lines = 0;
-    for( ParseBuffer *buff : parsed_buffs ) {
+    for( const std::unique_ptr<ParseBuffer> &buff : parsed_buffs ) {
         tot_lines += buff->ind;
     }
     EXPECT_EQ( tot_lines, (times_msg_fits_in_buffer+1)*2 );
 
-    for( ParseBuffer *buff : parsed_buffs ) {
+    for( const std::unique_ptr<ParseBuffer> &buff : parsed_buffs ) {
         for( unsigned i = 0; i < buff->ind; i++ ) {
             std::vector<TokenWordPair> &line = *(buff->parsed_lines[i]);
             int line_ind = 0;

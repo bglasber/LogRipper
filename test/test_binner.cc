@@ -16,7 +16,7 @@ TEST( test_binner, test_binner_keys_single_word_entry_correctly ) {
     ParseBufferEngine pbe_in;
     Binner binner( &pbe_in );
 
-    ParseBuffer *buffer = new ParseBuffer();
+    std::unique_ptr<ParseBuffer> buffer = std::make_unique<ParseBuffer>();
     std::vector<TokenWordPair> *line = new std::vector<TokenWordPair>();
     TokenWordPair twp;
     twp.tok = WORD;
@@ -31,7 +31,7 @@ TEST( test_binner, test_binner_keys_single_word_entry_correctly ) {
     //Create copy locally
     std::vector<TokenWordPair> line2( *line );
 
-    binner.binEntriesInBuffer( buffer );
+    binner.binEntriesInBuffer( std::move( buffer ) );
     std::unordered_map<BinKey, Bin, BinKeyHasher> &map = binner.getUnderlyingMap();
 
     BinKey bk;
@@ -45,14 +45,13 @@ TEST( test_binner, test_binner_keys_single_word_entry_correctly ) {
     EXPECT_EQ( vec.at(0).getLine(), line2 );
 
     //The lines will be destroyed when the binner shuts down
-    //delete buffer;
 }
 
 TEST( test_binner, test_binner_keys_different_word_size_different_buckets ) {
     ParseBufferEngine pbe_in;
     Binner binner( &pbe_in );
 
-    ParseBuffer *buffer = new ParseBuffer();
+    std::unique_ptr<ParseBuffer> buffer = std::make_unique<ParseBuffer>();
 
     //One word
     std::vector<TokenWordPair> *line = new std::vector<TokenWordPair>();
@@ -81,7 +80,7 @@ TEST( test_binner, test_binner_keys_different_word_size_different_buckets ) {
 
     std::vector<TokenWordPair> loc_line2( *line2 );
 
-    binner.binEntriesInBuffer( buffer );
+    binner.binEntriesInBuffer( std::move( buffer ) );
     std::unordered_map<BinKey, Bin, BinKeyHasher> &map = binner.getUnderlyingMap();
 
     EXPECT_EQ( map.size(), 2 );
@@ -103,14 +102,13 @@ TEST( test_binner, test_binner_keys_different_word_size_different_buckets ) {
     EXPECT_EQ( vec2.size(), 1 );
     EXPECT_EQ( vec2.at(0).getLine(), loc_line2 );
 
-    //delete buffer;
 }
 
 TEST( test_binner, same_entry_word_match_removed ) {
     ParseBufferEngine pbe_in;
     Binner binner( &pbe_in );
 
-    ParseBuffer *buffer = new ParseBuffer();
+    std::unique_ptr<ParseBuffer> buffer = std::make_unique<ParseBuffer>();
 
     //One word
     std::vector<TokenWordPair> *line = new std::vector<TokenWordPair>();
@@ -134,7 +132,7 @@ TEST( test_binner, same_entry_word_match_removed ) {
     line2->push_back( twp );
     buffer->addLine( line2 );
 
-    binner.binEntriesInBuffer( buffer );
+    binner.binEntriesInBuffer( std::move( buffer ) );
     std::unordered_map<BinKey, Bin, BinKeyHasher> &map = binner.getUnderlyingMap();
 
     EXPECT_EQ( map.size(), 1 );
@@ -149,14 +147,13 @@ TEST( test_binner, same_entry_word_match_removed ) {
     EXPECT_EQ( vec.size(), 1 );
     EXPECT_EQ( vec.at(0).getLine(), loc_line1 );
 
-    //delete buffer;
 }
 
 TEST( test_binner, same_entry_word_mismatch_kept ) {
     ParseBufferEngine pbe_in;
     Binner binner( &pbe_in );
 
-    ParseBuffer *buffer = new ParseBuffer();
+    std::unique_ptr<ParseBuffer> buffer = std::make_unique<ParseBuffer>();
 
     //One word
     std::vector<TokenWordPair> *line = new std::vector<TokenWordPair>();
@@ -181,7 +178,7 @@ TEST( test_binner, same_entry_word_mismatch_kept ) {
     buffer->addLine( line2 );
     std::vector<TokenWordPair> loc_line2( *line2 );
 
-    binner.binEntriesInBuffer( buffer );
+    binner.binEntriesInBuffer( std::move( buffer ) );
     std::unordered_map<BinKey, Bin, BinKeyHasher> &map = binner.getUnderlyingMap();
 
     EXPECT_EQ( map.size(), 1 );
@@ -197,14 +194,13 @@ TEST( test_binner, same_entry_word_mismatch_kept ) {
     EXPECT_EQ( vec.at(0).getLine(), loc_line1 );
     EXPECT_EQ( vec.at(1).getLine(), loc_line2 );
 
-    //delete buffer;
 }
 
 TEST( test_binner, same_word_different_params ) {
     ParseBufferEngine pbe_in;
     Binner binner( &pbe_in );
 
-    ParseBuffer *buffer = new ParseBuffer();
+    std::unique_ptr<ParseBuffer> buffer = std::make_unique<ParseBuffer>();
 
     //One word
     std::vector<TokenWordPair> *line = new std::vector<TokenWordPair>();
@@ -231,7 +227,7 @@ TEST( test_binner, same_word_different_params ) {
     buffer->addLine( line2 );
     std::vector<TokenWordPair> loc_line2( *line2 );
 
-    binner.binEntriesInBuffer( buffer );
+    binner.binEntriesInBuffer( std::move( buffer ) );
     std::unordered_map<BinKey, Bin, BinKeyHasher> &map = binner.getUnderlyingMap();
 
     EXPECT_EQ( map.size(), 2 );
@@ -253,14 +249,13 @@ TEST( test_binner, same_word_different_params ) {
     EXPECT_EQ( vec2.size(), 1 );
     EXPECT_EQ( vec2.at(0).getLine(), loc_line2 );
 
-    //delete buffer;
 }
 
 TEST( test_binner, no_match_abstracted_vals ) {
     ParseBufferEngine pbe_in;
     Binner binner( &pbe_in );
 
-    ParseBuffer *buffer = new ParseBuffer();
+    std::unique_ptr<ParseBuffer> buffer = std::make_unique<ParseBuffer>();
 
     //One word
     std::vector<TokenWordPair> *line = new std::vector<TokenWordPair>();
@@ -289,7 +284,7 @@ TEST( test_binner, no_match_abstracted_vals ) {
     line2->push_back( twp );
     buffer->addLine( line2 );
 
-    binner.binEntriesInBuffer( buffer );
+    binner.binEntriesInBuffer( std::move( buffer ) );
     std::unordered_map<BinKey, Bin, BinKeyHasher> &map = binner.getUnderlyingMap();
 
     EXPECT_EQ( map.size(), 1 );
@@ -304,7 +299,6 @@ TEST( test_binner, no_match_abstracted_vals ) {
     EXPECT_EQ( vec.size(), 1 );
     EXPECT_EQ( vec.at(0).getLine(), loc_line1 );
 
-    //delete buffer;
 }
 
 TEST( test_binner, test_serialize ) {
@@ -315,7 +309,7 @@ TEST( test_binner, test_serialize ) {
     ParseBufferEngine pbe_in;
     Binner binner( &pbe_in );
 
-    ParseBuffer *buffer = new ParseBuffer();
+    std::unique_ptr<ParseBuffer> buffer = std::make_unique<ParseBuffer>();
 
     //One word
     std::vector<TokenWordPair> *line = new std::vector<TokenWordPair>();
@@ -343,7 +337,7 @@ TEST( test_binner, test_serialize ) {
     line2->push_back( twp );
     buffer->addLine( line2 );
 
-    binner.binEntriesInBuffer( buffer );
+    binner.binEntriesInBuffer( std::move( buffer ) );
     binner.serialize( os );
     os.close();
 
@@ -554,10 +548,10 @@ TEST( test_binner, computes_transitions_among_single_thread ) {
     ParseBufferEngine pbe_in;
     Binner binner( &pbe_in );
 
-    ParseBuffer *buffer = new ParseBuffer();
+    std::unique_ptr<ParseBuffer> buffer = std::make_unique<ParseBuffer>();
     buffer->addLine( line_copy1 );
     buffer->addLine( line_copy2 );
-    binner.binEntriesInBuffer( buffer );
+    binner.binEntriesInBuffer( std::move( buffer ) );
 
     std::unordered_map<BinKey, Bin, BinKeyHasher> &map = binner.getUnderlyingMap();
 
@@ -735,13 +729,13 @@ TEST( test_binner, multiple_transitions_and_lines_in_same_thread ) {
     ParseBufferEngine pbe_in;
     Binner binner( &pbe_in );
 
-    ParseBuffer *buffer = new ParseBuffer();
+    std::unique_ptr<ParseBuffer> buffer = std::make_unique<ParseBuffer>();
     buffer->addLine( line_copy1 );
     buffer->addLine( line_copy2 );
     buffer->addLine( line2_copy1 );
     buffer->addLine( line2_copy2 );
 
-    binner.binEntriesInBuffer( buffer );
+    binner.binEntriesInBuffer( std::move( buffer ) );
 
     std::unordered_map<BinKey, Bin, BinKeyHasher> &map = binner.getUnderlyingMap();
 
@@ -1075,7 +1069,7 @@ TEST( test_binner, multiple_transitions_and_lines_multiple_threads_serdes ) {
     ParseBufferEngine pbe_in;
     Binner binner( &pbe_in );
 
-    ParseBuffer *buffer = new ParseBuffer();
+    std::unique_ptr<ParseBuffer> buffer = std::make_unique<ParseBuffer>();
     buffer->addLine( t12811_line_copy1 );
     buffer->addLine( t12812_line2_copy1 );
     buffer->addLine( t12812_line2_copy2 );
@@ -1097,7 +1091,7 @@ TEST( test_binner, multiple_transitions_and_lines_multiple_threads_serdes ) {
     //Line2 -> Line2
     //So 2/3 -> Line2, 1/3 -> Line
 
-    binner.binEntriesInBuffer( buffer );
+    binner.binEntriesInBuffer( std::move( buffer ) );
 
     std::unordered_map<BinKey, Bin, BinKeyHasher> &map = binner.getUnderlyingMap();
 

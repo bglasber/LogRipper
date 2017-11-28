@@ -1,4 +1,6 @@
 #include "parse_buffer.h"
+#include <memory>
+#include <list>
 
 typedef void (*RuleFunction)( std::vector<TokenWordPair> *tokens_in_line );
 
@@ -14,7 +16,7 @@ public:
         pbe_in( pbe_in ),
         pbe_out( pbe_out ),
         done( false ) {}
-    void applyRules( ParseBuffer *buffer );
+    void applyRules( std::unique_ptr<ParseBuffer> &buffer );
     void startProcessingBuffers();
     void terminateWhenDoneProcessing();
 };

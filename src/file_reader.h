@@ -5,6 +5,7 @@
 #include <mutex> 
 #include <condition_variable>
 #include <vector>
+#include <memory>
 struct BufferPool {
     unsigned    num_buffs;
     unsigned    buff_sizes;

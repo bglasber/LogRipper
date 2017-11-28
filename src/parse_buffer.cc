@@ -29,10 +29,9 @@ ParseBufferEngine::ParseBufferEngine() {
 
 ParseBufferEngine::~ParseBufferEngine() {
     std::unique_lock<std::mutex> lk( mut );
-    for( ParseBuffer *buff : ready_buffers ) {
+    for( std::unique_ptr<ParseBuffer> &buff : ready_buffers ) {
         //Since these haven't been processed yet, we'll clean up the lines
         buff->destroyBufferLines();
-        delete buff;
     }
     ready_buffers.clear();
 }
@@ -42,30 +41,30 @@ void ParseBufferEngine::termWhenOutOfBuffers() {
     cv.notify_one();
 }
 
-ParseBuffer *ParseBufferEngine::getNextBuffer() {
+std::unique_ptr<ParseBuffer> ParseBufferEngine::getNextBuffer() {
     std::unique_lock<std::mutex> lk( mut );
     //Sleep until there are some ready buffers
     if( ready_buffers.empty() ) {
         if( term_when_out_of_buffers ) {
-            return NULL;
+            return nullptr;
         }
         cv.wait( lk, [ this ] { return !ready_buffers.empty() || term_when_out_of_buffers; } );
     }
     if( ready_buffers.empty() && term_when_out_of_buffers ) {
-        return NULL;
+        return nullptr;
     }
-    ParseBuffer *buff = ready_buffers.front();
+    std::unique_ptr<ParseBuffer> buff = std::move( ready_buffers.front() );
     ready_buffers.pop_front();
-    return buff;
+    return std::move( buff );
 }
 
-void ParseBufferEngine::putNextBuffer( ParseBuffer *buff ) {
+void ParseBufferEngine::putNextBuffer( std::unique_ptr<ParseBuffer> buff ) {
 RETRY:
     bool full = false;
     {
         std::unique_lock<std::mutex> lk( mut );
         if( ready_buffers.size() < 1000 ) {
-            ready_buffers.push_back( buff );
+            ready_buffers.push_back( std::move( buff ) );
             cv.notify_one();
         } else {
             full = true;
@@ -80,6 +79,6 @@ RETRY:
 }
 
 
-std::list<ParseBuffer *> &ParseBufferEngine::getReadyBuffers() {
+std::list<std::unique_ptr<ParseBuffer>> &ParseBufferEngine::getReadyBuffers() {
     return ready_buffers;
 }

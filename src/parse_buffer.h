@@ -6,6 +6,7 @@
 #include <condition_variable>
 #include <list>
 #include <vector>
+#include <memory>
 
 //A buffer of pointers to parsed lines
 //Used to pass "units of work" between the components
@@ -23,16 +24,16 @@ struct ParseBuffer {
 class ParseBufferEngine {
     std::mutex mut;
     std::condition_variable cv;
-    std::list<ParseBuffer *> ready_buffers;
+    std::list<std::unique_ptr<ParseBuffer>> ready_buffers;
     bool term_when_out_of_buffers;
 public:
     ParseBufferEngine();
     ~ParseBufferEngine();
-    ParseBuffer *getNextBuffer();
+    std::unique_ptr<ParseBuffer> getNextBuffer();
     void termWhenOutOfBuffers();
-    void putNextBuffer( ParseBuffer *buff );
+    void putNextBuffer( std::unique_ptr<ParseBuffer> buff );
 
     //For unit tests
-    std::list<ParseBuffer *> &getReadyBuffers();
+    std::list<std::unique_ptr<ParseBuffer>> &getReadyBuffers();
 };
 #endif

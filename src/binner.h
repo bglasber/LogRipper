@@ -11,6 +11,7 @@
 #include <vector>
 #include <list>
 #include <iostream>
+#include <memory>
 
 bool abstracted_line_match( const std::vector<TokenWordPair> *line1, const std::vector<TokenWordPair> *line2 );
 
@@ -158,7 +159,7 @@ class Binner {
 public:
     Binner( ParseBufferEngine *pbe_in ) : pbe_in( pbe_in ), done( false ) {}
     ~Binner();
-    void binEntriesInBuffer( ParseBuffer *buffer );
+    void binEntriesInBuffer( std::unique_ptr<ParseBuffer> buffer );
 
     void serialize( std::ofstream &os );
     void deserialize( std::ifstream &is );
