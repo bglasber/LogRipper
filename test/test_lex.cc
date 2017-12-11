@@ -36,7 +36,7 @@ TEST( test_lex, test_char_token_mappings ) {
 
 TEST( test_lex, test_process_line ) {
     unlink( "test_lex.txt" );
-    int fd = open( "test_lex.txt", O_CREAT | O_EXCL | O_WRONLY );
+    int fd = open( "test_lex.txt", O_CREAT | O_EXCL | O_WRONLY, 0600 );
     ASSERT_GT( fd, 2 );
     std::string msg = "I12:12:12 [file_name.cc] This is a test message\n";
     int rc = write( fd, msg.data(), msg.size() );
@@ -152,7 +152,7 @@ TEST( test_lex, test_process_line ) {
 
 TEST( test_lex, one_full_buffer ) {
     unlink( "test_lex.txt" );
-    int fd = open( "test_lex.txt", O_CREAT | O_EXCL | O_RDWR );
+    int fd = open( "test_lex.txt", O_CREAT | O_EXCL | O_RDWR, 0600 );
     ASSERT_GT( fd, 2 );
     std::string msg = "AAAAAAAAAAAAAAA\n"; //16 bytes so it aligns evenly on buffer boundary
 
@@ -203,7 +203,7 @@ TEST( test_lex, one_full_buffer ) {
 
 TEST( test_lex, both_buffers_full ) {
     unlink( "test_lex.txt" );
-    int fd = open( "test_lex.txt", O_CREAT | O_EXCL | O_RDWR );
+    int fd = open( "test_lex.txt", O_CREAT | O_EXCL | O_RDWR, 0600 );
     ASSERT_GT( fd, 2 );
     std::string msg = "AAAAAAAAAAAAAAA\n"; //16 bytes so it aligns evenly on buffer boundary
 
@@ -253,7 +253,7 @@ TEST( test_lex, both_buffers_full ) {
 
 TEST( test_lex, async_reload_buffer ) {
     unlink( "test_lex.txt" );
-    int fd = open( "test_lex.txt", O_CREAT | O_EXCL | O_RDWR );
+    int fd = open( "test_lex.txt", O_CREAT | O_EXCL | O_RDWR, 0600 );
     ASSERT_GT( fd, 2 );
     std::string msg = "AAAAAAAAAAAAAAA\n"; //16 bytes so it aligns evenly on buffer boundary
 
@@ -303,7 +303,7 @@ TEST( test_lex, async_reload_buffer ) {
 
 TEST( test_lex, async_reload_alternating_buffer ) {
     unlink( "test_lex.txt" );
-    int fd = open( "test_lex.txt", O_CREAT | O_EXCL | O_RDWR );
+    int fd = open( "test_lex.txt", O_CREAT | O_EXCL | O_RDWR, 0600 );
     ASSERT_GT( fd, 2 );
     std::string msg = "AAAAAAAAAAAAAAA\n"; //16 bytes so it aligns evenly on buffer boundary
     std::string msg2 = "111111111111111\n"; //16 bytes so it aligns evenly on buffer boundary
@@ -380,7 +380,7 @@ TEST( test_lex, async_reload_alternating_buffer ) {
 
 TEST( test_lex, cross_buffer_boundary ) {
     unlink( "test_lex.txt" );
-    int fd = open( "test_lex.txt", O_CREAT | O_EXCL | O_WRONLY );
+    int fd = open( "test_lex.txt", O_CREAT | O_EXCL | O_WRONLY, 0600 );
     ASSERT_GT( fd, 2 );
 
     struct stat stat_buf;
@@ -506,7 +506,7 @@ TEST( test_lex, cross_buffer_boundary ) {
 
 TEST( test_lex, double_cross_buffer_boundary ) {
     unlink( "test_lex.txt" );
-    int fd = open( "test_lex.txt", O_CREAT | O_EXCL | O_WRONLY );
+    int fd = open( "test_lex.txt", O_CREAT | O_EXCL | O_WRONLY, 0600 );
     ASSERT_GT( fd, 2 );
 
     struct stat stat_buf;
