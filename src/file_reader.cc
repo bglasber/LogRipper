@@ -456,6 +456,14 @@ PARSER_MAIN:
                 twp.tok = NEW_LINE;
                 twp.word = token_buff;
                 tokens_in_line->push_back( twp );
+                /*
+                std::cout << "Line: " << std::endl;
+                for( unsigned int i = 0; i < tokens_in_line->size(); i++ ) {
+                    std::cout << "tok(" << i << ") = " << tokens_in_line->at(i).tok << std::endl;
+                }
+                std::cout << std::endl;
+                std::cout << std::endl;
+                */
 
                 bool buff_done = buffer->addLine( std::move( tokens_in_line ) );
                 //Buffer full, make a new one
