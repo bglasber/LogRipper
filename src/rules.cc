@@ -1,4 +1,5 @@
 #include "rules.h"
+#include <iostream>
 
 void anonymize_log_preamble( std::unique_ptr<std::vector<TokenWordPair>> &line ) {
     if( line->size() < 35 ) {
@@ -20,8 +21,22 @@ void anonymize_log_preamble( std::unique_ptr<std::vector<TokenWordPair>> &line )
     line->at(12).tok = ABSTRACTED_VALUE; //NUMBER
     //PUNC
     line->at(14).tok = ABSTRACTED_VALUE; //NUMBER
-    //WHITE_SPACE
-    //PUNC "-"
+    //WHITE_SPACE 15
+    //PUNC "-" //This is the thread Id 16
+    auto iter = line->begin() + 15; //Space Before
+    auto delete_start = iter+1;
+    auto delete_end = delete_start;
+    TokenWordPair twp;
+    twp.tok = ABSTRACTED_VALUE;
+    twp.word = "";
+    while( delete_end->tok != WHITE_SPACE ) {
+        twp.word += delete_end->word;
+        delete_end++;
+    }
+    line->erase( delete_start, delete_end );
+    iter++;
+    line->insert( iter, std::move( twp ) );
+    
     //WHITE_SPACE
     //PUNC "-"
     //WHITE_SPACE //19
@@ -97,6 +112,7 @@ uint64_t get_thread_id_from_parsed_line( std::shared_ptr<std::vector<TokenWordPa
     if( line->size() < 12 ) {
         return 0;
     }
-    return 0;
+    uint64_t hash = std::hash<std::string>{}(line->at(16).word);
+    return hash;
 }
 
