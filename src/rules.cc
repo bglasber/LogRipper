@@ -2,28 +2,18 @@
 #include <iostream>
 
 void anonymize_log_preamble( std::unique_ptr<std::vector<TokenWordPair>> &line ) {
-    if( line->size() < 35 ) {
-        return;
-    }
+
     //The port we connected from
-    line->at(0).tok = ABSTRACTED_VALUE; //NUMBER
-    //PUNC
-    line->at(2).tok = ABSTRACTED_VALUE; //NUMBER
-    //PUNC
-    line->at(4).tok = ABSTRACTED_VALUE; //NUMBER
-    //PUNC
-    line->at(6).tok = ABSTRACTED_VALUE; //NUMBER
-    //PUNC
-    line->at(8).tok = ABSTRACTED_VALUE; //NUMBER
-    //PUNC
-    line->at(10).tok = ABSTRACTED_VALUE; //NUMBER
-    //PUNC
-    line->at(12).tok = ABSTRACTED_VALUE; //NUMBER
-    //PUNC
-    line->at(14).tok = ABSTRACTED_VALUE; //NUMBER
-    //WHITE_SPACE 15
-    //PUNC "-" //This is the thread Id 16
-    auto iter = line->begin() + 15; //Space Before
+    line->at(0).tok = ABSTRACTED_VALUE; //NUMBER 127
+    //PUNC .
+    line->at(2).tok = ABSTRACTED_VALUE; //NUMBER 0
+    //PUNC .
+    line->at(4).tok = ABSTRACTED_VALUE; //NUMBER 0
+    //PUNC .
+    line->at(6).tok = ABSTRACTED_VALUE; //NUMBER 1
+    //WHITE_SPACE 7
+    //PUNC "-" 8 //This is the thread Id
+    auto iter = line->begin() + 7; //Space Before
     auto delete_start = iter+1;
     auto delete_end = delete_start;
     TokenWordPair twp;
@@ -37,82 +27,57 @@ void anonymize_log_preamble( std::unique_ptr<std::vector<TokenWordPair>> &line )
     iter++;
     line->insert( iter, std::move( twp ) );
     
-    //WHITE_SPACE
-    //PUNC "-"
-    //WHITE_SPACE //19
-    //PUNC 20
-    line->at(21).tok = ABSTRACTED_VALUE; //NUMBER
-    assert( line->at(22).word == "/" ); //PUNC
-    line->at(23).tok = ABSTRACTED_VALUE; //WORD, month
-    assert( line->at(24).word == "/" ); //PUNC
-    line->at(25).tok = ABSTRACTED_VALUE; //NUMBER, year
-    // PUNC, :
-    line->at(27).tok = ABSTRACTED_VALUE; //NUMBER, hour
-    // PUNC, :
-    line->at(29).tok = ABSTRACTED_VALUE; //NUMBER, minute
-    // PUNC, :
-    line->at(31).tok = ABSTRACTED_VALUE; //NUMBER, second
-    // white space, 32
-    // - symbol, 33
-    line->at(34).tok = ABSTRACTED_VALUE; //GMT -5
+    //WHITE_SPACE 9
+    //PUNC "-" 10
+    //WHITE_SPACE //11
+    //PUNC 12
+    line->at(13).tok = ABSTRACTED_VALUE; //NUMBER
+    assert( line->at(14).word == "/" ); //PUNC
+    line->at(15).tok = ABSTRACTED_VALUE; //WORD, month
+    assert( line->at(16).word == "/" ); //PUNC
+    line->at(17).tok = ABSTRACTED_VALUE; //NUMBER, year
+    // PUNC, :18
+    line->at(19).tok = ABSTRACTED_VALUE; //NUMBER, hour
+    // PUNC, :20
+    line->at(21).tok = ABSTRACTED_VALUE; //NUMBER, minute
+    // PUNC, :22
+    line->at(23).tok = ABSTRACTED_VALUE; //NUMBER, second
+    // white space, 24
+    // - symbol, 25
+    line->at(26).tok = ABSTRACTED_VALUE; //GMT -5
 }
 
 void anonymize_size_of_page( std::unique_ptr<std::vector<TokenWordPair>> &line ) {
     size_t num_toks = line->size();
     line->at( num_toks-2 ).tok = ABSTRACTED_VALUE;
 }
-void anonymize_id( std::unique_ptr<std::vector<TokenWordPair>> &line, std::string id ) {
-    int found_loc = -1;
-    for( unsigned ind = 39; ind < line->size(); ind++ ) {
-        if( line->at( ind ).tok == WORD && line->at( ind ).word == id ) {
-            found_loc = (int) ind;
-        }
-    }
-    if( found_loc == -1 ) {
-        return;
-    }
 
-    auto insert_loc = line->begin() + found_loc;
+void anonymize_query_string( std::unique_ptr<std::vector<TokenWordPair>> &line ) {
+    auto insert_loc = line->begin() + 35;
     auto pos = insert_loc;
-    pos++; //at equals sign
-    pos++; //at actual thing now
+    pos++; //at ?
     auto end_delete_loc = pos;
-    while( end_delete_loc->tok != WHITE_SPACE ) {
-        end_delete_loc++;
-    }
-    line->erase( pos, end_delete_loc );
-    
-    insert_loc++; //at equals sign
-    insert_loc++; //after deletion point
-
     TokenWordPair twp;
     twp.tok = ABSTRACTED_VALUE;
-    twp.word = "";
 
+    while( end_delete_loc->tok != WHITE_SPACE ) {
+        //We need to extract the username/customerid to determine the thread
+        if( end_delete_loc->tok == WORD && end_delete_loc->word == "username" ) {
+            twp.word = (end_delete_loc+3)->word;
+        } else if( end_delete_loc->tok == WORD && end_delete_loc->word == "customerid" ) {
+            twp.word = (end_delete_loc+2)->word;
+        }
+        end_delete_loc++;
+    }
+    insert_loc++;
+    line->erase( pos, end_delete_loc );
     line->insert( insert_loc, std::move( twp ) );
 }
 
-void anonymize_product_id( std::unique_ptr<std::vector<TokenWordPair>> &line ) {
-    anonymize_id( line, "productId" );
-}
-
-void anonymize_item_id( std::unique_ptr<std::vector<TokenWordPair>> &line ) {
-    anonymize_id( line, "itemId" );
-}
-
-void anonymize_category_id( std::unique_ptr<std::vector<TokenWordPair>> &line ) {
-    anonymize_id( line, "categoryId" );
-   
-}
-void anonymize_working_item_id( std::unique_ptr<std::vector<TokenWordPair>> &line ) {
-    anonymize_id( line, "workingItemId" );
-}
-
 uint64_t get_thread_id_from_parsed_line( std::shared_ptr<std::vector<TokenWordPair>> &line ) {
-    if( line->size() < 12 ) {
+    if( line->size() < 37 ) {
         return 0;
     }
-    uint64_t hash = std::hash<std::string>{}(line->at(16).word);
-    return hash;
+    std::string &str = line->at(36).word;
+    return atoi(str.c_str());
 }
-

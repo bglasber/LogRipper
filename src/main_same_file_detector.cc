@@ -32,10 +32,7 @@ int main() {
     std::list<RuleFunction> rule_funcs;
     rule_funcs.push_back( anonymize_log_preamble );
     rule_funcs.push_back( anonymize_size_of_page );
-    rule_funcs.push_back( anonymize_category_id );
-    rule_funcs.push_back( anonymize_item_id );
-    rule_funcs.push_back( anonymize_product_id );
-    rule_funcs.push_back( anonymize_working_item_id );
+    rule_funcs.push_back( anonymize_query_string );
     RuleApplier rule_applier( std::move( rule_funcs ), &pbe_file_to_rule, &pbe_rule_to_detector );
 
     //Make a detector from the old map
