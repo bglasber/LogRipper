@@ -38,7 +38,7 @@ static void print_line( std::shared_ptr<std::vector<TokenWordPair>> &line ) {
 void Detector::processLinesInBuffer( std::unique_ptr<ParseBuffer> buffer ) {
     for( unsigned int i = 0; i < buffer->ind; i++ ) {
         std::shared_ptr<std::vector<TokenWordPair>> line( std::move( buffer->parsed_lines[i] ) );
-        uint64_t thread_id = get_thread_id_from_parsed_line( line );
+        uint64_t thread_id = get_thread_id_from_parsed_line( line.get() );
         std::shared_ptr<std::vector<TokenWordPair>> last_line = last_lines.getLastLine( thread_id );
 
         //std::cout << "Processing Line: " << line_counter << std::endl;

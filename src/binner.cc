@@ -178,7 +178,7 @@ void Binner::binEntriesInBuffer( std::unique_ptr<ParseBuffer> buffer ) {
 
         std::shared_ptr<std::vector<TokenWordPair>> shared_line_ptr( std::move( line ) );
 
-        uint64_t thread_id = get_thread_id_from_parsed_line( shared_line_ptr );
+        uint64_t thread_id = get_thread_id_from_parsed_line( shared_line_ptr.get() );
         BinKey bk = Bin::makeBinKeyForLine( shared_line_ptr );
 
         std::shared_ptr<std::vector<TokenWordPair>> last_line = last_lines.getLastLine( thread_id );
