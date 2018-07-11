@@ -3,13 +3,13 @@
 #include <list>
 #include <utility>
 
-typedef void (*RuleFunction)( std::vector<TokenWordPair> *tokens_in_line );
+typedef void (*RuleFunction)( std::vector<std::vector<TokenWordPair> *> tokens_in_lines );
 
 class RuleApplier {
     std::list<RuleFunction> abstraction_rules;
     ParseBufferEngine *pbe_in;
     ParseBufferEngine *pbe_out;
-    std::list<std::vector<TokenWordPair>> internal_buffer;
+    std::list<std::vector<TokenWordPair> *> internal_buffer;
     unsigned int last_line;
     volatile bool done;
     void processLoop();
@@ -23,5 +23,5 @@ public:
     void applyRules( std::unique_ptr<ParseBuffer> &buffer );
     void startProcessingBuffers();
     void terminateWhenDoneProcessing();
-    std::vector<TokenWordPair> *generateNextLine( std::unique_ptr<ParseBuffer> &buffer );
+    std::vector<std::vector<TokenWordPair> *> generateNextChunk( std::unique_ptr<ParseBuffer> &buffer );
 };
