@@ -3,6 +3,7 @@
 #include "rule_applier.h"
 #include "binner.h"
 #include "rules.h"
+#include "pg_rules.h"
 #include <unistd.h>
 #include <assert.h>
 #include <sys/types.h>
@@ -20,6 +21,11 @@ int main() {
     FileReader reader( fd, 128u, &pbe_file_to_rule );
 
     std::list<RuleFunction> rule_funcs;
+    rule_funcs.push_back( anonymize_pg_preamble );
+
+
+    //For GLOG
+    /*
     rule_funcs.push_back( anonymize_glog_preamble );
     rule_funcs.push_back( word_colon_number_anonymize );
     rule_funcs.push_back( word_colon_space_number_anonymize );
@@ -35,6 +41,7 @@ int main() {
     rule_funcs.push_back( abstract_bucket_line1 );
     rule_funcs.push_back( abstract_client_locks_number );
     rule_funcs.push_back( abstract_destination_site );
+    */
     RuleApplier rule_applier( std::move( rule_funcs ), &pbe_file_to_rule, &pbe_rule_to_binner );
 
     Binner binner( &pbe_rule_to_binner );

@@ -8,18 +8,18 @@ using namespace ::testing;
 
 class test_rules : public ::testing::Test {};
 
-void pass_through_rule( std::vector<std::vector<TokenWordPair> *> tokens_in_lines ) {
+void pass_through_rule( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
     (void) tokens_in_lines;
 }
 
-void abstract_all_rule( std::vector<std::vector<TokenWordPair> *> tokens_in_lines ) {
+void abstract_all_rule( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
     std::vector<TokenWordPair> *tokens_in_line = tokens_in_lines.at(0);
     for( unsigned int i = 0; i < tokens_in_line->size(); i++ ) {
         tokens_in_line->at(i).tok = ABSTRACTED_VALUE;
     }
 }
 
-void abstract_all_word( std::vector<std::vector<TokenWordPair> *> tokens_in_lines ) {
+void abstract_all_word( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
     std::vector<TokenWordPair> *tokens_in_line = tokens_in_lines.at(0);
     for( unsigned int i = 0; i < tokens_in_line->size(); i++ ) {
         if( tokens_in_line->at(i).tok == WORD ) {
@@ -28,7 +28,7 @@ void abstract_all_word( std::vector<std::vector<TokenWordPair> *> tokens_in_line
     }
 }
 
-void abstract_all_number( std::vector<std::vector<TokenWordPair> *> tokens_in_lines ) {
+void abstract_all_number( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
     std::vector<TokenWordPair> *tokens_in_line = tokens_in_lines.at(0);
     for( unsigned int i = 0; i < tokens_in_line->size(); i++ ) {
         if( tokens_in_line->at(i).tok == NUMBER ) {
