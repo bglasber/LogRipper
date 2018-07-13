@@ -21,6 +21,14 @@ int main() {
     FileReader reader( fd, 128u, &pbe_file_to_rule );
 
     std::list<RuleFunction> rule_funcs;
+    rule_funcs.push_back( strip_location_line );
+    rule_funcs.push_back( strip_detail_line );
+    rule_funcs.push_back( strip_hint_line );
+    //TODO: it could be the case that we actually care about the context,
+    //but lets assume we don't until proven otherwise
+    rule_funcs.push_back( strip_context_line );
+    rule_funcs.push_back( fold_stmt_rollback_line );
+    rule_funcs.push_back( fold_stmt_commit_line );
     rule_funcs.push_back( anonymize_pg_preamble );
 
 
