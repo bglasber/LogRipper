@@ -3,11 +3,24 @@
 
 void anonymize_pg_preamble( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
     assert( tokens_in_lines.size() == 1 );
+    std::vector<TokenWordPair> *line = tokens_in_lines.at(0);
+    line->at(0).tok = ABSTRACTED_VALUE; //year
+    line->at(2).tok = ABSTRACTED_VALUE; //month
+    line->at(4).tok = ABSTRACTED_VALUE; //day
+    line->at(6).tok = ABSTRACTED_VALUE; //hour
+    line->at(8).tok = ABSTRACTED_VALUE; //minute
+    line->at(10).tok = ABSTRACTED_VALUE; //second
+    line->at(12).tok = ABSTRACTED_VALUE; //ms
+    //line->at(14).tok = ABSTRACTED_VALUE; //timezone
+    //line->at(16).tok = ABSTRACTED_VALUE; //d
+    uint64_t offset = get_tid_offset_in_line( line );
+    line->erase( line->begin() + 16, line->begin() + offset );
+    dump_line( line );
 }
 
 void dump_line( std::vector<TokenWordPair> *line ) {
     for( const auto &twp : *line ) {
-        std:: cout << twp.word << " ";
+        std::cout << twp.tok << ", " << twp.word << std::endl;
     }
 }
 
