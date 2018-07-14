@@ -35,6 +35,10 @@ static void print_line( std::shared_ptr<std::vector<TokenWordPair>> &line ) {
     for( const auto &twp : *line ) {
         std::cout << twp.word << " ";
     }
+    for( const auto &twp : *line ) {
+        std::cout << twp.tok << " ";
+    }
+
     std::cout << std::endl;
 }
 

@@ -10,6 +10,7 @@ void strip_hint_line( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines
 void strip_context_line( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines );
 void fold_stmt_rollback_line( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines );
 void fold_stmt_commit_line( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines );
+void strip_exec_name( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines );
 
 
 

@@ -30,6 +30,7 @@ int main() {
     rule_funcs.push_back( fold_stmt_rollback_line );
     rule_funcs.push_back( fold_stmt_commit_line );
     rule_funcs.push_back( anonymize_pg_preamble );
+    rule_funcs.push_back( strip_exec_name );
 
 
     //For GLOG
