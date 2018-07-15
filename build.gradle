@@ -97,6 +97,7 @@ model {
                         srcDir "src"
                         include "**/*.cc"
                         exclude "**/main_same_file_detector.cc"
+                        exclude "**/main_dump_map.cc"
                     }
                 }
             }
@@ -112,10 +113,30 @@ model {
                         srcDir "src"
                         include "**/*.cc"
                         exclude "**/main_miner.cc"
+                        exclude "**/main_dump_map.cc"
                     }
                 }
             }
         }
+
+        dump_map(NativeExecutableSpec) {
+            sources {
+                cpp.lib library: 'glog', linkage: 'shared'
+                cpp.lib library: 'pthread', linkage: 'shared'
+                cpp.lib library: 'boost_serialization', linkage: 'shared'
+                //cpp.lib library: 'folly', linkage: 'shared'
+                cpp {
+                    source {
+                        srcDir "src"
+                        include "**/*.cc"
+                        exclude "**/main_miner.cc"
+                        exclude "**/main_same_file_detector.cc"
+                    }
+                }
+            }
+        }
+
+
 
         unitTest(NativeExecutableSpec) {
             binaries.all {

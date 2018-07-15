@@ -55,6 +55,10 @@ public:
     uint64_t getTransitionCount( std::shared_ptr<std::vector<TokenWordPair>> &line );
 
     std::pair<bool,double> isOutlier( std::shared_ptr<std::vector<TokenWordPair>> &transition_line, uint64_t total_transitions );
+
+    std::unordered_map<LineKey, std::pair<std::shared_ptr<std::vector<TokenWordPair>>, uint64_t>, LineKeyHasher> &getTransitions() {
+        return transitions;
+    }
 };
 
 class LineWithTransitions {
@@ -88,6 +92,14 @@ public:
     }
     std::shared_ptr<std::vector<TokenWordPair>> &getLine() {
         return line;
+    }
+
+    LineTransitions &getLineTransitions() {
+        return lt;
+    }
+
+    uint64_t getTimesSeen() {
+        return times_seen;
     }
 };
 
