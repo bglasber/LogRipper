@@ -30,7 +30,10 @@ int main() {
         for( auto &lwt : vec ) {
             const std::shared_ptr<std::vector<TokenWordPair>> &line = lwt.getLine();
             LineKey lk( line );
-            std::cout << "Key: " << lkh( lk ) << std::endl;
+            std::cout << lkh( lk ) << ": ";
+            for( const auto &twp : *line ) {
+                std::cout << twp.word << " ";
+            }
         }
     }
 
