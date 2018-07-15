@@ -1,4 +1,5 @@
 #include "rules.h"
+#include "pg_rules.h"
 #include "binner.h"
 #include "detector.h"
 #include "rule_applier.h"
@@ -30,6 +31,18 @@ int main() {
     FileReader reader( fd, 128u, &pbe_file_to_rule );
 
     std::list<RuleFunction> rule_funcs;
+    rule_funcs.push_back( strip_location_line );
+    rule_funcs.push_back( strip_detail_line );
+    rule_funcs.push_back( strip_hint_line );
+    //TODO: it could be the case that we actually care about the context,
+    //but lets assume we don't until proven otherwise
+    rule_funcs.push_back( strip_context_line );
+    rule_funcs.push_back( fold_stmt_rollback_line );
+    rule_funcs.push_back( fold_stmt_commit_line );
+    rule_funcs.push_back( anonymize_pg_preamble );
+    rule_funcs.push_back( strip_exec_name );
+
+    /* For GLOG
     rule_funcs.push_back( anonymize_glog_preamble );
     rule_funcs.push_back( word_colon_number_anonymize );
     rule_funcs.push_back( word_colon_space_number_anonymize );
@@ -45,6 +58,7 @@ int main() {
     rule_funcs.push_back( abstract_bucket_line1 );
     rule_funcs.push_back( abstract_client_locks_number );
     rule_funcs.push_back( abstract_destination_site );
+    */
     RuleApplier rule_applier( std::move( rule_funcs ), &pbe_file_to_rule, &pbe_rule_to_detector );
 
     //Make a detector from the old map
