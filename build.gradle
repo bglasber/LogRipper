@@ -63,7 +63,10 @@ model {
                 setHeaderPathOrAssert( "gmock", headers )
                 setLinkPathOrAssert( "libgmock.so", false, binaries )
             }
-
+            gflags {
+                setHeaderPathOrAssert( "gflags", headers )
+                setLinkPathOrAssert( "libgflags.so", false, binaries )
+            }
             gtest {
                 setHeaderPathOrAssert( "gtest", headers )
                 setLinkPathOrAssert( "libgtest.so", false, binaries )
