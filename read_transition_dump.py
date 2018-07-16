@@ -2,8 +2,9 @@ import numpy as np
 
 class transition_node:
 
-    def __init__( self, key, val ):
+    def __init__( self, key, prob, val ):
         self.key = key
+        self.prob = prob
         self.val = val
         self.node_transitions = {}
 
@@ -28,8 +29,9 @@ def extract_transitions_from_dump( fname ):
                 # We only want to split on the first one, so piece it back together afterwards
                 sp = line.split(":")
                 k = int(sp[0])
-                line_val = ":".join( sp[1:] )
-                key_to_str_map[k] = transition_node( k, line_val.strip() )
+                prob = float(sp[1].lstrip())
+                line_val = ":".join( sp[2:] )
+                key_to_str_map[k] = transition_node( k, prob, line_val.strip() )
     return key_to_str_map
 
 def find_key_ind( key, ordered_keys ):
@@ -37,6 +39,23 @@ def find_key_ind( key, ordered_keys ):
         if ordered_keys[i] == key:
             return i
     return None
+
+def convert_transition_graph_into_sendable_form( tgraph ):
+    # There are three things we want to send
+    unique_log_ids = []
+    log_id_probs = []
+    log_id_transition_probs = []
+
+    unique_log_ids = list(tgraph.keys())
+
+    for log_id in unique_log_ids:
+        log_id_probs.append( tgraph[log_id].prob )
+
+    for log_id in unique_log_ids:
+        for transition, prob in tgraph[log_id].node_transitions.items():
+            log_id_transition_probs.append( (log_id, transition, prob ) )
+
+    return [ unique_log_ids, log_id_probs, log_id_transition_probs ]
 
 def convert_transitions_to_np_arr( ordered_keys, transitions ):
     mat = np.zeros( (len(ordered_keys), len(ordered_keys)) )
@@ -57,3 +76,5 @@ def cpd_divergence_calc( arr1, arr2 ):
 
     # Euclidean distance between cpds
     return np.sum( np.square( loc_arr1 - loc_arr2 ) )
+
+print( convert_transition_graph_into_sendable_form( extract_transitions_from_dump( "out" ) ) )

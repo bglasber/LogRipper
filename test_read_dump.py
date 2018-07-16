@@ -71,10 +71,3 @@ def test_cpd_calc_symmetric():
     arr1 = np.array( [0.75, 0.25, 0.25, 0.75] )
     arr2 = np.array( [0.25, 0.75, 0.75, 0.25] )
     assert cpd_divergence_calc( arr1, arr2 ) == 4 * 0.5**2
-
-
-
-
-test_cpd_calc_simple()
-
-

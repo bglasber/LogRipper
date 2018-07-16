@@ -25,6 +25,15 @@ int main() {
     std::unordered_map<BinKey, Bin, BinKeyHasher> bin_map;
     iarch >> bin_map;
 
+    uint64_t tot_times_seen = 0;
+    for( auto &ent : bin_map ) {
+        Bin &bin = ent.second;
+        std::vector<LineWithTransitions> &vec = bin.getBinVector();
+        for( auto &lwt : vec ) {
+            tot_times_seen += lwt.getTimesSeen();
+        }
+    }
+
     
     LineKeyHasher lkh;
     for( auto &ent : bin_map ) {
@@ -32,8 +41,11 @@ int main() {
         std::vector<LineWithTransitions> &vec = bin.getBinVector();
         for( auto &lwt : vec ) {
             const std::shared_ptr<std::vector<TokenWordPair>> &line = lwt.getLine();
+            uint64_t times_seen = lwt.getTimesSeen();
+            double prob = (double) times_seen / tot_times_seen;
             LineKey lk( line );
-            std::cout << lkh( lk ) << ": ";
+            std::cout << lkh( lk ) << ": " << prob << ": ";
+
             for( const auto &twp : *line ) {
                 std::cout << twp.word << " ";
             }
