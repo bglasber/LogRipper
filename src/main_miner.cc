@@ -11,10 +11,14 @@
 #include <fcntl.h>
 #include <fstream>
 #include <iostream>
+#include <gflags/gflags.h>
+
+DEFINE_string( in_file_name, "ssServer.log.short", "Input file name" );
+DEFINE_string( out_file_name, "deserialized_map", "Output map file" );
 
 int main() {
 
-    int fd = open( "ssServer.log.short", O_RDONLY ); 
+    int fd = open( FLAGS_in_file_name.c_str(), O_RDONLY ); 
     assert( fd > 0 );
     ParseBufferEngine pbe_file_to_rule;
     ParseBufferEngine pbe_rule_to_binner;
@@ -86,7 +90,7 @@ int main() {
     std::cout << "Found " << num_unique_entries << " unique entries in the map." << std::endl;
 
     std::ofstream os;
-    os.open( "deserialized_map", std::ofstream::out );
+    os.open( FLAGS_out_file_name.c_str(), std::ofstream::out );
     binner.serialize( os );
     return 0;
 }

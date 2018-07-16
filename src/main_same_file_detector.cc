@@ -13,15 +13,19 @@
 #include <fcntl.h>
 #include <fstream>
 #include <iostream>
+#include <gflags/gflags.h>
+
+DEFINE_string( in_file_name, "ssServer.log.short", "Input file name" );
+DEFINE_string( map_file, "deserialized_map", "Deserialized Map file" );
 
 int main() {
 
-    int fd = open( "ssServer.log.short", O_RDONLY );
+    int fd = open( FLAGS_in_file_name.c_str(), O_RDONLY );
     assert( fd > 0 );
 
     //Read the deserialized map
     std::ifstream is;
-    is.open( "deserialized_map", std::ifstream::in );
+    is.open( FLAGS_map_file.c_str(), std::ifstream::in );
     boost::archive::text_iarchive iarch( is );
     std::unordered_map<BinKey, Bin, BinKeyHasher> bin_map;
     iarch >> bin_map;

@@ -13,11 +13,14 @@
 #include <fcntl.h>
 #include <fstream>
 #include <iostream>
+#include <gflags/gflags.h>
+
+DEFINE_string( in_file_name, "deserialized_map", "Input map file name" );
 
 int main() {
     //Read the deserialized map
     std::ifstream is;
-    is.open( "deserialized_map", std::ifstream::in );
+    is.open( FLAGS_in_file_name.c_str(), std::ifstream::in );
     boost::archive::text_iarchive iarch( is );
     std::unordered_map<BinKey, Bin, BinKeyHasher> bin_map;
     iarch >> bin_map;
