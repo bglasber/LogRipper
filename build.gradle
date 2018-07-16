@@ -88,6 +88,7 @@ model {
     components {
         logMiner(NativeExecutableSpec) {
             sources {
+                cpp.lib library: 'gflags', linkage: 'shared'
                 cpp.lib library: 'glog', linkage: 'shared'
                 cpp.lib library: 'pthread', linkage: 'shared'
                 cpp.lib library: 'boost_serialization', linkage: 'shared'
@@ -105,6 +106,7 @@ model {
         detector(NativeExecutableSpec) {
             sources {
                 cpp.lib library: 'glog', linkage: 'shared'
+                cpp.lib library: 'gflags', linkage: 'shared'
                 cpp.lib library: 'pthread', linkage: 'shared'
                 cpp.lib library: 'boost_serialization', linkage: 'shared'
                 //cpp.lib library: 'folly', linkage: 'shared'
@@ -121,6 +123,7 @@ model {
 
         dump_map(NativeExecutableSpec) {
             sources {
+                cpp.lib library: 'gflags', linkage: 'shared'
                 cpp.lib library: 'glog', linkage: 'shared'
                 cpp.lib library: 'pthread', linkage: 'shared'
                 cpp.lib library: 'boost_serialization', linkage: 'shared'
@@ -143,6 +146,7 @@ model {
                 cppCompiler.define "UNIT_TEST"
             }
             sources {
+                cpp.lib library: 'gflags', linkage: 'shared'
                 cpp.lib library: 'glog', linkage: 'shared'
                 cpp.lib library: 'gmock', linkage: 'shared'
                 cpp.lib library: 'pthread', linkage: 'shared'
