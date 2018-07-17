@@ -17,7 +17,10 @@
 
 DEFINE_string( in_file_name, "deserialized_map", "Input map file name" );
 
-int main() {
+int main( int argc, char **argv ) {
+
+    gflags::ParseCommandLineFlags( &argc, &argv, true );
+
     //Read the deserialized map
     std::ifstream is;
     is.open( FLAGS_in_file_name.c_str(), std::ifstream::in );

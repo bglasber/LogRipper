@@ -18,7 +18,9 @@
 DEFINE_string( in_file_name, "ssServer.log.short", "Input file name" );
 DEFINE_string( map_file, "deserialized_map", "Deserialized Map file" );
 
-int main() {
+int main( int argc, char **argv ) {
+
+    gflags::ParseCommandLineFlags( &argc, &argv, true );
 
     int fd = open( FLAGS_in_file_name.c_str(), O_RDONLY );
     assert( fd > 0 );
