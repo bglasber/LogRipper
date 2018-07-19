@@ -40,8 +40,18 @@ int main( int argc, char **argv ) {
     rule_funcs.push_back( fold_debug_line );
     rule_funcs.push_back( fold_error_line );
     rule_funcs.push_back( strip_redundant_secondary_line );
+    rule_funcs.push_back( abstract_statement_names );
+    rule_funcs.push_back( abstract_unnamed );
+    rule_funcs.push_back( abstract_threshold );
+    rule_funcs.push_back( abstract_vac_anl );
+    rule_funcs.push_back( abstract_log_file_identifier );
+    rule_funcs.push_back( abstract_post_int );
+    rule_funcs.push_back( abstract_pre_int );
+    rule_funcs.push_back( abstract_int_index );
+    rule_funcs.push_back( abstract_int_equal );
+    rule_funcs.push_back( abstract_slash_numbers );
+    rule_funcs.push_back( strip_intermediate_newline );
     rule_funcs.push_back( anonymize_pg_preamble );
-
 
     //For GLOG
     /*

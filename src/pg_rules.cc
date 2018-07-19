@@ -139,6 +139,197 @@ void strip_redundant_secondary_line( std::vector<std::vector<TokenWordPair> *> &
     }
 }
 
+void abstract_statement_names( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
+    assert( tokens_in_lines.size() == 1 );
+    uint64_t offset1 = get_tid_offset_in_line( tokens_in_lines.at(0) );
+    std::vector<TokenWordPair> *line = tokens_in_lines.at(0);
+    for( uint64_t i = offset1; i <= line->size()-2; i++ ) {
+
+        if( line->at( i ).tok == WORD and line->at( i ).word == "S" and
+            line->at( i+1 ).tok == PUNCTUATION and line->at( i+1 ).word == "_" and
+            line->at( i+2 ).tok == NUMBER )  {
+            TokenWordPair twp;
+            twp.tok = ABSTRACTED_VALUE;
+            twp.word = line->at(i).word + line->at(i+1).word + line->at(i+2).word;
+            line->erase( line->begin() + i, line->begin() + i+3 );
+            line->insert( line->begin() + i, twp );
+        }
+    }
+}
+
+void abstract_unnamed( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
+    assert( tokens_in_lines.size() == 1 );
+    uint64_t offset1 = get_tid_offset_in_line( tokens_in_lines.at(0) );
+    std::vector<TokenWordPair> *line = tokens_in_lines.at(0);
+    for( uint64_t i = offset1; i <= line->size()-2; i++ ) {
+
+        if( line->at( i ).tok == PUNCTUATION and line->at( i ).word == "<" and
+            line->at( i+1 ).tok == WORD and line->at( i+1 ).word == "unnamed" and
+            line->at( i+2 ).tok == PUNCTUATION and line->at( i+1 ).word == ">" )  {
+            TokenWordPair twp;
+            twp.tok = ABSTRACTED_VALUE;
+            twp.word = line->at(i).word + line->at(i+1).word + line->at(i+2).word;
+            line->erase( line->begin() + i, line->begin() + i+3 );
+            line->insert( line->begin() + i, twp );
+        }
+    }
+}
+
+void abstract_threshold( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
+    assert( tokens_in_lines.size() == 1 );
+    uint64_t offset1 = get_tid_offset_in_line( tokens_in_lines.at(0) );
+    std::vector<TokenWordPair> *line = tokens_in_lines.at(0);
+
+    for( uint64_t i = offset1; i <= line->size()-3; i++ ) {
+        if( line->at( i ).tok == PUNCTUATION and line->at( i ).word == "(" and
+            line->at( i+1 ).tok == WORD and line->at( i+1 ).word == "threshold" and
+            line->at( i+2 ).tok == WHITE_SPACE and 
+            line->at( i+3 ).tok == NUMBER ) {
+            line->at( i+3 ).tok = ABSTRACTED_VALUE;
+        }
+    }
+}
+
+void abstract_vac_anl( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
+    assert( tokens_in_lines.size() == 1 );
+    uint64_t offset1 = get_tid_offset_in_line( tokens_in_lines.at(0) );
+    std::vector<TokenWordPair> *line = tokens_in_lines.at(0);
+
+    for( uint64_t i = offset1; i <= line->size()-3; i++ ) {
+        if( line->at( i ).tok == WORD and (line->at( i ).word == "vac" or line->at( i ).word == "anl" ) and
+            line->at( i+1 ).tok == PUNCTUATION and line->at( i+1 ).word == ":" and
+            line->at( i+2 ).tok == WHITE_SPACE and 
+            line->at( i+3 ).tok == NUMBER ) {
+            line->at( i+3 ).tok = ABSTRACTED_VALUE;
+        }
+    }
+}
+
+void abstract_log_file_identifier(  std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
+    assert( tokens_in_lines.size() == 1 );
+    uint64_t offset1 = get_tid_offset_in_line( tokens_in_lines.at(0) );
+    std::vector<TokenWordPair> *line = tokens_in_lines.at(0);
+    for( uint64_t i = offset1; i <= line->size()-2; i++ ) {
+        if( line->at( i ).tok == WORD and ( 
+                line->at( i ).word == "log" or
+                line->at( i ).word == "stats" ) and
+            line->at( i+1 ).tok == WHITE_SPACE and
+            line->at( i+2 ).tok == WORD and line->at( i+2 ).word == "file" ) {
+
+            TokenWordPair twp;
+            twp.tok = ABSTRACTED_VALUE;
+            std::string word;
+            for( unsigned int j = i; j < line->size(); j++ ) {
+                word += line->at( j ).word;
+            }
+            twp.word = word;
+            line->erase( line->begin() + i, line->end() );
+            line->insert( line->begin() + i, twp );
+            break;
+        }
+    }
+}
+
+void abstract_post_int(  std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
+    assert( tokens_in_lines.size() == 1 );
+    uint64_t offset1 = get_tid_offset_in_line( tokens_in_lines.at(0) );
+    std::vector<TokenWordPair> *line = tokens_in_lines.at(0);
+    for( uint64_t i = offset1; i <= line->size()-2; i++ ) {
+        if( line->at( i ).tok == WORD and (
+                line->at( i ).word == "in" or
+                line->at( i ).word == "of" or
+                line->at( i ).word == "is" or
+                line->at( i ).word == "found" or
+                line->at( i ).word == "remove" or
+                line->at( i ).word == "contains" or
+                line->at( i ).word == "removed" or
+                line->at( i ).word == "scanned" or
+                line->at( i ).word == "PID" ) and 
+            line->at( i+1 ).tok == WHITE_SPACE and
+            line->at( i+2 ).tok == NUMBER ) {
+            line->at( i+2 ).tok = ABSTRACTED_VALUE;
+        }
+    }
+}
+
+void abstract_pre_int(  std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
+    assert( tokens_in_lines.size() == 1 );
+    uint64_t offset1 = get_tid_offset_in_line( tokens_in_lines.at(0) );
+    std::vector<TokenWordPair> *line = tokens_in_lines.at(0);
+    for( uint64_t i = offset1; i <= line->size()-2; i++ ) {
+        if( line->at(i).tok == NUMBER and 
+            line->at( i+1 ).tok == WHITE_SPACE and
+            line->at( i+2 ).tok == WORD and (
+                line->at( i+2 ).word == "on" or
+                line->at( i+2 ).word == "callbacks" or
+                line->at( i+2 ).word == "before" or
+                line->at( i+2 ).word == "dead" or
+                line->at( i+2 ).word == "rows" or
+                line->at( i+2 ).word == "nonremovable" or
+                line->at( i+2 ).word == "estimated" ) ) {
+            line->at( i ).tok = ABSTRACTED_VALUE;
+        }
+    }
+}
+
+void abstract_slash_numbers( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
+    assert( tokens_in_lines.size() == 1 );
+    uint64_t offset1 = get_tid_offset_in_line( tokens_in_lines.at(0) );
+    std::vector<TokenWordPair> *line = tokens_in_lines.at(0);
+    for( uint64_t i = offset1; i <= line->size()-4; i++ ) {
+        if( line->at(i).tok == NUMBER and
+            line->at(i+1).tok == PUNCTUATION and line->at(i+1).word == "/" and
+            line->at(i+2).tok == NUMBER and
+            line->at(i+3).tok == PUNCTUATION and line->at(i+3).word == "/" and
+            line->at(i+4).tok == NUMBER ) {
+            line->at(i).tok = ABSTRACTED_VALUE;
+            line->at(i+2).tok = ABSTRACTED_VALUE;
+            line->at(i+4).tok = ABSTRACTED_VALUE;
+        }
+    }
+}
+
+void strip_intermediate_newline( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
+    assert( tokens_in_lines.size() == 1 );
+    uint64_t offset1 = get_tid_offset_in_line( tokens_in_lines.at(0) );
+    std::vector<TokenWordPair> *line = tokens_in_lines.at(0);
+    for( uint64_t i = offset1; i <= line->size()-1; i++ ) {
+        if( line->at(i).tok == NEW_LINE ) { 
+            //i+1 not included
+            line->erase( line->begin() + i, line->begin() + i + 1 );
+        }
+    }
+}
+
+
+void abstract_int_index( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
+    assert( tokens_in_lines.size() == 1 );
+    uint64_t offset1 = get_tid_offset_in_line( tokens_in_lines.at(0) );
+    std::vector<TokenWordPair> *line = tokens_in_lines.at(0);
+    for( uint64_t i = offset1; i <= line->size()-2; i++ ) {
+        if( line->at(i).tok == PUNCTUATION and ( 
+                line->at(i).word == "(" or line->at(i).word == "[" ) and
+            line->at( i+1 ).tok == NUMBER and
+            line->at( i+2 ).tok == PUNCTUATION and (
+                line->at(i+2).word == ")" or line->at(i+2).word == "]" ) ) {
+            line->at( i+1 ).tok = ABSTRACTED_VALUE;
+        }
+    }
+}
+
+void abstract_int_equal(  std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
+    assert( tokens_in_lines.size() == 1 );
+    uint64_t offset1 = get_tid_offset_in_line( tokens_in_lines.at(0) );
+    std::vector<TokenWordPair> *line = tokens_in_lines.at(0);
+    for( uint64_t i = offset1; i <= line->size()-2; i++ ) {
+        if( line->at(i).tok == WORD and 
+            line->at( i+1 ).tok == PUNCTUATION and line->at( i+1 ).word == "=" and
+            line->at( i+2 ).tok == NUMBER ) {
+            line->at( i+2 ).tok = ABSTRACTED_VALUE;
+        }
+    }
+}
+
 void fold_stmt_commit_line( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
     uint64_t offset1 = get_tid_offset_in_line( tokens_in_lines.at(0) );
     if( tokens_in_lines.at(0)->at( offset1 + 4 ).word == "STATEMENT" and
