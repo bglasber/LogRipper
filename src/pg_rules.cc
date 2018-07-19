@@ -2,6 +2,10 @@
 #include <iostream>
 
 void anonymize_pg_preamble( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
+    if( tokens_in_lines.size() != 1 ) {
+        dump_line( tokens_in_lines.at(0) );
+        dump_line( tokens_in_lines.at(1) );
+    }
     assert( tokens_in_lines.size() == 1 );
     std::vector<TokenWordPair> *line = tokens_in_lines.at(0);
     line->at(0).tok = ABSTRACTED_VALUE; //year
@@ -80,6 +84,58 @@ void fold_stmt_rollback_line( std::vector<std::vector<TokenWordPair> *> &tokens_
         tokens_in_lines.at(0)->insert( tokens_in_lines.at(0)->begin() + offset1 + 4, twp );
         delete tokens_in_lines.at( 1 );
         tokens_in_lines.erase( tokens_in_lines.begin() + 1 );
+    }
+}
+
+void abstract_equal_number( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
+    for( uint64_t i = 0; i < tokens_in_lines.size(); i++ ) { 
+        std::vector<TokenWordPair> *line = tokens_in_lines.at(i);
+        for( uint64_t j = 0; j < line->size()-2; j++ ) {
+            if( line->at( j ).tok == PUNCTUATION and line->at( j ).word == "=" and
+                line->at(j+1).tok == WHITE_SPACE and
+                line->at(j+2).tok == NUMBER )
+            {
+                line->at(j+2).tok = ABSTRACTED_VALUE;
+            }
+        }
+    }
+}
+
+void fold_debug_line( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
+    //First line is DEBUG
+    if( tokens_in_lines.size() > 1 ) {
+        uint64_t offset1 = get_tid_offset_in_line( tokens_in_lines.at(1) );
+        if( tokens_in_lines.at(1)->at( offset1 + 4 ).word == "DEBUG" ) {
+            tokens_in_lines.at(0)->insert( tokens_in_lines.at(0)->end(), tokens_in_lines.at(1)->begin() + offset1 + 10, tokens_in_lines.at(1)->end() );
+
+            delete tokens_in_lines.at( 1 );
+            tokens_in_lines.erase( tokens_in_lines.begin() + 1 );
+            //dump_line( tokens_in_lines.at(0) );
+        }
+    }
+}
+
+void fold_error_line( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
+    //First line is DEBUG
+    if( tokens_in_lines.size() > 1 ) {
+        uint64_t offset1 = get_tid_offset_in_line( tokens_in_lines.at(1) );
+        if( tokens_in_lines.at(1)->at( offset1 + 4 ).word == "ERROR" ) {
+            tokens_in_lines.at(0)->insert( tokens_in_lines.at(0)->end(), tokens_in_lines.at(1)->begin() + offset1 + 10, tokens_in_lines.at(1)->end() );
+
+            delete tokens_in_lines.at( 1 );
+            tokens_in_lines.erase( tokens_in_lines.begin() + 1 );
+            //dump_line( tokens_in_lines.at(0) );
+        }
+    }
+}
+
+void strip_redundant_secondary_line( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
+    if( tokens_in_lines.size() > 1 ) {
+        uint64_t offset1 = get_tid_offset_in_line( tokens_in_lines.at(1) );
+        if( tokens_in_lines.at(1)->at( offset1 + 4 ).word == "LOG" ) {
+            delete tokens_in_lines.at( 1 );
+            tokens_in_lines.erase( tokens_in_lines.begin() + 1 );
+        }
     }
 }
 

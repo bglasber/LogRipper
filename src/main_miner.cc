@@ -35,8 +35,12 @@ int main( int argc, char **argv ) {
     rule_funcs.push_back( strip_context_line );
     rule_funcs.push_back( fold_stmt_rollback_line );
     rule_funcs.push_back( fold_stmt_commit_line );
-    rule_funcs.push_back( anonymize_pg_preamble );
     rule_funcs.push_back( strip_exec_name );
+    rule_funcs.push_back( abstract_equal_number );
+    rule_funcs.push_back( fold_debug_line );
+    rule_funcs.push_back( fold_error_line );
+    rule_funcs.push_back( strip_redundant_secondary_line );
+    rule_funcs.push_back( anonymize_pg_preamble );
 
 
     //For GLOG

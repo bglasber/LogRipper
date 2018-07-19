@@ -11,6 +11,10 @@ void strip_context_line( std::vector<std::vector<TokenWordPair> *> &tokens_in_li
 void fold_stmt_rollback_line( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines );
 void fold_stmt_commit_line( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines );
 void strip_exec_name( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines );
+void abstract_equal_number( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines );
+void fold_debug_line( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines );
+void fold_error_line( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines );
+void strip_redundant_secondary_line( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines );
 
 
 
