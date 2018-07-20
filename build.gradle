@@ -15,7 +15,7 @@ def setHeaderPathOrAssert( headerName, headers ) {
             break;
         }
     }
-    assert( foundHeaders )
+    assert foundHeaders : headerName
 }
 
 def setLinkPathOrAssert( fileName, isStatic, binaries ) {
@@ -41,7 +41,7 @@ def setLinkPathOrAssert( fileName, isStatic, binaries ) {
             break;
         }
     }
-    assert( foundLink )
+    assert foundLink : fileName
 
 }
 
