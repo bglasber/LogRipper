@@ -297,6 +297,7 @@ void strip_intermediate_newline( std::vector<std::vector<TokenWordPair> *> &toke
         if( line->at(i).tok == NEW_LINE ) { 
             //i+1 not included
             line->erase( line->begin() + i, line->begin() + i + 1 );
+            break;
         }
     }
 }

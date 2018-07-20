@@ -52,10 +52,8 @@ int main( int argc, char **argv ) {
             for( const auto &twp : *line ) {
                 std::cout << twp.word << " ";
             }
-            std::cout << std::endl;
         }
     }
-
     std::cout << std::endl;
     for( auto &ent : bin_map ) {
         Bin &bin = ent.second;
