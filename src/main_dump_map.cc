@@ -52,6 +52,7 @@ int main( int argc, char **argv ) {
             for( const auto &twp : *line ) {
                 std::cout << twp.word << " ";
             }
+            std::cout << std::endl;
         }
     }
     std::cout << std::endl;
