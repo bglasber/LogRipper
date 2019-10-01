@@ -8,31 +8,28 @@ using namespace ::testing;
 
 class test_rules : public ::testing::Test {};
 
-void pass_through_rule( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
-    (void) tokens_in_lines;
+void pass_through_rule( std::unique_ptr<std::vector<TokenWordPair>> &line ) {
+    (void) line;
 }
 
-void abstract_all_rule( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
-    std::vector<TokenWordPair> *tokens_in_line = tokens_in_lines.at(0);
-    for( unsigned int i = 0; i < tokens_in_line->size(); i++ ) {
-        tokens_in_line->at(i).tok = ABSTRACTED_VALUE;
+void abstract_all_rule( std::unique_ptr<std::vector<TokenWordPair>> &line ) {
+    for( unsigned int i = 0; i < line->size(); i++ ) {
+        line->at(i).tok = ABSTRACTED_VALUE;
     }
 }
 
-void abstract_all_word( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
-    std::vector<TokenWordPair> *tokens_in_line = tokens_in_lines.at(0);
-    for( unsigned int i = 0; i < tokens_in_line->size(); i++ ) {
-        if( tokens_in_line->at(i).tok == WORD ) {
-            tokens_in_line->at(i).tok = ABSTRACTED_VALUE;
+void abstract_all_word( std::unique_ptr<std::vector<TokenWordPair>> &line ) {
+    for( unsigned int i = 0; i < line->size(); i++ ) {
+        if( line->at(i).tok == WORD ) {
+            line->at(i).tok = ABSTRACTED_VALUE;
         }
     }
 }
 
-void abstract_all_number( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines ) {
-    std::vector<TokenWordPair> *tokens_in_line = tokens_in_lines.at(0);
-    for( unsigned int i = 0; i < tokens_in_line->size(); i++ ) {
-        if( tokens_in_line->at(i).tok == NUMBER ) {
-            tokens_in_line->at(i).tok = ABSTRACTED_VALUE;
+void abstract_all_number( std::unique_ptr<std::vector<TokenWordPair>> &line ) {
+    for( unsigned int i = 0; i < line->size(); i++ ) {
+        if( line->at(i).tok == NUMBER ) {
+            line->at(i).tok = ABSTRACTED_VALUE;
         }
     }
 }

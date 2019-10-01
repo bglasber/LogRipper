@@ -1,4 +1,5 @@
 #include "rules.h"
+#include <iostream>
 
 //Different word matches will entail different log entries
 //We don't want the file names in the GLOG preamble to create different events
@@ -433,10 +434,6 @@ void abstract_client_locks_number( std::vector<std::vector<TokenWordPair> *> &to
 }
 
 uint64_t get_thread_id_from_parsed_line( std::vector<TokenWordPair> *line ) {
-
-    if( line->size() < 12 ) {
-        return 0;
-    }
-    return atoi(line->at(11).word.c_str());
+    return atoi( line->at(5).word.c_str() );
 }
 

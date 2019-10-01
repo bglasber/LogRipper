@@ -4,7 +4,7 @@
 #include <utility>
 #include <unordered_map>
 
-typedef void (*RuleFunction)( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines );
+typedef void (*RuleFunction)( std::unique_ptr<std::vector<TokenWordPair>> &line );
 
 class RuleApplier {
     std::list<RuleFunction> abstraction_rules;
@@ -27,5 +27,4 @@ public:
     void applyRules( std::unique_ptr<ParseBuffer> &buffer );
     void startProcessingBuffers();
     void terminateWhenDoneProcessing();
-    std::vector<std::vector<TokenWordPair> *> generateNextChunk( std::unique_ptr<ParseBuffer> &buffer );
 };

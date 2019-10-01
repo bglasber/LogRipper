@@ -66,7 +66,7 @@ std::pair<bool,double> LineTransitions::isOutlier( std::shared_ptr<std::vector<T
         return std::make_pair( false, 0.0 );
     }
 
-    double z_stat = z_stat_top / sqrt((0.9 * (1-0.9))/total_transitions);
+    double z_stat = z_stat_top / sqrt((0.9* (1-0.9))/total_transitions);
     std::cout << "Found outlier, got z-stat of: " << z_stat << std::endl;
     std::cout << "Count: " << this_line_count << ", Total: " << total_transitions << std::endl;
     std::cout << "Dominant Count: " << max_count << ", Total: " << total_transitions << std::endl;
@@ -232,7 +232,7 @@ Binner::~Binner() {
 void Binner::processLoop() {
     for( ;; ) {
         std::unique_ptr<ParseBuffer> buffer = std::move( pbe_in->getNextBuffer() );
-        if( !buffer ) {
+        if( buffer == nullptr ) {
             done = true;
             std::cout << "Binner got null buffer, terminating..." << std::endl;
             return;

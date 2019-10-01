@@ -4,7 +4,6 @@
 #include <vector>
 #include <memory>
 
-
 void anonymize_glog_preamble( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines );
 void word_colon_number_anonymize( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines );
 void word_colon_space_number_anonymize( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines );

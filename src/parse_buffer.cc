@@ -55,9 +55,11 @@ std::unique_ptr<ParseBuffer> ParseBufferEngine::getNextBuffer() {
     if( ready_buffers.empty() && term_when_out_of_buffers ) {
         return nullptr;
     }
+
+    assert( !ready_buffers.empty() );
     std::unique_ptr<ParseBuffer> buff = std::move( ready_buffers.front() );
     ready_buffers.pop_front();
-    return std::move( buff );
+    return buff;
 }
 
 void ParseBufferEngine::putNextBuffer( std::unique_ptr<ParseBuffer> buff ) {

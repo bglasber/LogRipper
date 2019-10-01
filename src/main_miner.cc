@@ -27,30 +27,6 @@ int main( int argc, char **argv ) {
     FileReader reader( fd, 128u, &pbe_file_to_rule );
 
     std::list<RuleFunction> rule_funcs;
-    rule_funcs.push_back( strip_location_line );
-    rule_funcs.push_back( strip_detail_line );
-    rule_funcs.push_back( strip_hint_line );
-    //TODO: it could be the case that we actually care about the context,
-    //but lets assume we don't until proven otherwise
-    rule_funcs.push_back( strip_context_line );
-    rule_funcs.push_back( fold_stmt_rollback_line );
-    rule_funcs.push_back( fold_stmt_commit_line );
-    rule_funcs.push_back( strip_exec_name );
-    rule_funcs.push_back( abstract_equal_number );
-    rule_funcs.push_back( fold_debug_line );
-    rule_funcs.push_back( fold_error_line );
-    rule_funcs.push_back( strip_redundant_secondary_line );
-    rule_funcs.push_back( abstract_statement_names );
-    rule_funcs.push_back( abstract_unnamed );
-    rule_funcs.push_back( abstract_threshold );
-    rule_funcs.push_back( abstract_vac_anl );
-    rule_funcs.push_back( abstract_log_file_identifier );
-    rule_funcs.push_back( abstract_post_int );
-    rule_funcs.push_back( abstract_pre_int );
-    rule_funcs.push_back( abstract_int_index );
-    rule_funcs.push_back( abstract_int_equal );
-    rule_funcs.push_back( abstract_slash_numbers );
-    rule_funcs.push_back( strip_intermediate_newline );
     rule_funcs.push_back( anonymize_pg_preamble );
 
     //For GLOG
@@ -71,6 +47,8 @@ int main( int argc, char **argv ) {
     rule_funcs.push_back( abstract_client_locks_number );
     rule_funcs.push_back( abstract_destination_site );
     */
+
+
     RuleApplier rule_applier( std::move( rule_funcs ), &pbe_file_to_rule, &pbe_rule_to_binner );
 
     Binner binner( &pbe_rule_to_binner );

@@ -4,8 +4,6 @@
 #include <memory>
 #include <map>
 
-#define THRESHOLD 0.9
-
 class Detector {
     ParseBufferEngine *pbe_in;
     std::unordered_map<BinKey, Bin, BinKeyHasher> bin_map;
