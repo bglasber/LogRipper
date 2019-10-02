@@ -4,6 +4,23 @@
 #include <vector>
 
 void anonymize_pg_preamble( std::unique_ptr<std::vector<TokenWordPair>> &line );
+void abstract_parse_line( std::unique_ptr<std::vector<TokenWordPair>> &line );
+void abstract_name_line( std::unique_ptr<std::vector<TokenWordPair>> &line );
+void delete_at_character( std::unique_ptr<std::vector<TokenWordPair>> &line );
+void delete_after_stats_file( std::unique_ptr<std::vector<TokenWordPair>> &line );
+void abstract_equal_number( std::unique_ptr<std::vector<TokenWordPair>> &line );
+void abstract_brackets( std::unique_ptr<std::vector<TokenWordPair>> &line );
+void abstract_callbacks( std::unique_ptr<std::vector<TokenWordPair>> &line );
+void abstract_vac_anl( std::unique_ptr<std::vector<TokenWordPair>> &line );
+void abstract_vacuum_analyze_lines( std::unique_ptr<std::vector<TokenWordPair>> &line );
+void abstract_removable_lines( std::unique_ptr<std::vector<TokenWordPair>> &line );
+void abstract_live_dead_lines( std::unique_ptr<std::vector<TokenWordPair>> &line );
+void abstract_index_count_rows( std::unique_ptr<std::vector<TokenWordPair>> &line );
+void abstract_writing_block( std::unique_ptr<std::vector<TokenWordPair>> &line );
+void abstract_removed_page( std::unique_ptr<std::vector<TokenWordPair>> &line );
+void abstract_pid( std::unique_ptr<std::vector<TokenWordPair>> &line );
+
+
 /*
 void strip_location_line( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines );
 void strip_detail_line( std::vector<std::vector<TokenWordPair> *> &tokens_in_lines );

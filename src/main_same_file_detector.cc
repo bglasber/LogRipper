@@ -38,6 +38,21 @@ int main( int argc, char **argv ) {
 
     std::list<RuleFunction> rule_funcs;
     rule_funcs.push_back( anonymize_pg_preamble );
+    rule_funcs.push_back( abstract_parse_line );
+    rule_funcs.push_back( abstract_name_line );
+    rule_funcs.push_back( delete_at_character );
+    rule_funcs.push_back( delete_after_stats_file );
+    rule_funcs.push_back( abstract_equal_number );
+    rule_funcs.push_back( abstract_brackets );
+    rule_funcs.push_back( abstract_callbacks );
+    rule_funcs.push_back( abstract_vac_anl );
+    rule_funcs.push_back( abstract_vacuum_analyze_lines );
+    rule_funcs.push_back( abstract_removable_lines );
+    rule_funcs.push_back( abstract_live_dead_lines );
+    rule_funcs.push_back( abstract_index_count_rows );
+    rule_funcs.push_back( abstract_writing_block );
+    rule_funcs.push_back( abstract_removed_page );
+    rule_funcs.push_back( abstract_pid );
 
     /* For GLOG
     rule_funcs.push_back( anonymize_glog_preamble );

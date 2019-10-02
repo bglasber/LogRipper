@@ -169,6 +169,9 @@ BinKey Bin::makeBinKeyForLine( std::shared_ptr<std::vector<TokenWordPair>> &line
 void Binner::binEntriesInBuffer( std::unique_ptr<ParseBuffer> buffer ) {
     for( unsigned int i = 0; i < buffer->ind; i++ ) {
         std::unique_ptr<std::vector<TokenWordPair>> line = std::move( buffer->parsed_lines[i] );
+        if( line->empty() ) {
+            continue;
+        }
 
         //At this point, we need to put this line into the last_line position and into the
         //bin (if unique)
